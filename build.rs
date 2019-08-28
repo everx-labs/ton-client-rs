@@ -1,6 +1,7 @@
-//use std::env;
+use std::env;
 
 fn main() {
-    println!("cargo:rustc-link-search=native={}", "/Users/michaelvlasov/projects/ton/TON-SDK/target/release");
+    let root = env!("CARGO_MANIFEST_DIR");
+    println!("cargo:rustc-link-search=native={}/libs", root);
     println!("cargo:rustc-link-lib=dylib=tonclient");
 }

@@ -5,7 +5,7 @@ use crate::tests::{WALLET_ABI, WALLET_CODE_BASE64};
 fn test_piggy() {
     let ton = TonClient::new_with_base_url("http://0.0.0.0");
     let keypair = ton.crypto.generate_ed25519_keys();
-    ;
+
     let wallet_address = ton.contracts.deploy(WALLET_ABI, WALLET_CODE_BASE64,
         json!({}), &keypair).unwrap();
 

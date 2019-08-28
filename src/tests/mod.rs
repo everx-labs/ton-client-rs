@@ -1,4 +1,4 @@
-use crate::{TonClient, KeyPair, TonClientConfig};
+use crate::{TonClient, KeyPair};
 use serde::*;
 mod test_piggy;
 

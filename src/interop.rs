@@ -109,6 +109,23 @@ impl Interop {
         }
     }
 
+    fn base_json_request<R: DeserializeOwned>(context: InteropContext, method_name: &str, params_json: String) -> TonResult<R> {
+        let response = Self::interop_json_request(
+            context,
+            &method_name.to_string(),
+            &params_json);
+        if response.error_json.is_empty() {
+            let result: Result<R, serde_json::Error> = serde_json::from_str(&response.result_json);
+            result.map_err(|err| TonError::invalid_response_result(method_name, &response.result_json))
+        } else {
+            let result: Result<TonError, serde_json::Error> = serde_json::from_str(&response.error_json);
+            match result {
+                Ok(err) => Err(err),
+                Err(err) => Err(TonError::invalid_response_error(method_name, &response.error_json))
+            }
+        }
+    }
+
     pub fn json_request<P: Serialize, R: DeserializeOwned>(
         context: InteropContext,
         method_name: &str,
@@ -116,42 +133,14 @@ impl Interop {
     ) -> TonResult<R> {
         let params_json = serde_json::to_string(&params)
             .map_err(|err|TonError::invalid_params(method_name))?;
-        let response = Self::interop_json_request(
-            context,
-            &method_name.to_string(),
-            &params_json);
-        if response.error_json.is_empty() {
-            let result: Result<R, serde_json::Error> = serde_json::from_str(&response.result_json);
-            result.map_err(|err|TonError::invalid_response_result(method_name, &response.result_json))
-        } else {
-            let result: Result<TonError, serde_json::Error> = serde_json::from_str(&response.error_json);
-            match result {
-                Ok(err) => Err(err),
-                Err(err) => Err(TonError::invalid_response_error(method_name, &response.error_json))
-            }
-
-        }
+        Self::base_json_request(context, method_name, params_json)
     }
 
     pub fn json_request_no_args<R: DeserializeOwned>(
         context: InteropContext,
         method_name: &str,
     ) -> TonResult<R> {
-        let response = Self::interop_json_request(
-            context,
-            &method_name.to_string(),
-            &String::new());
-        if response.error_json.is_empty() {
-            let result: Result<R, serde_json::Error> = serde_json::from_str(&response.result_json);
-            result.map_err(|err|TonError::invalid_response_result(method_name, &response.result_json))
-        } else {
-            let result: Result<TonError, serde_json::Error> = serde_json::from_str(&response.error_json);
-            match result {
-                Ok(err) => Err(err),
-                Err(err) => Err(TonError::invalid_response_error(method_name, &response.error_json))
-            }
-
-        }
+        Self::base_json_request(context, method_name, String::new())
     }
 
     fn interop_json_request(
