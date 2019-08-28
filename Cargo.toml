@@ -1,0 +1,17 @@
+[package]
+name = "tonclientrs"
+version = "0.10.0"
+authors = ["Michael Vlasov <melsomino@gmail.com>"]
+edition = "2018"
+build = "build.rs"
+
+[dependencies]
+hex = "0.3.2"
+serde_json = "1.0.39"
+serde_derive = "1.0.91"
+serde = "1.0.91"
+base64 = "0.10.0"
+
+[lib]
+name = "tonclientrs"
+crate-type = ["staticlib"]

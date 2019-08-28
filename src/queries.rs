@@ -1,0 +1,57 @@
+use crate::interop::InteropContext;
+use serde_json::Value;
+use crate::TonResult;
+
+pub struct TonQueries {
+    context: InteropContext,
+    pub blocks: TonQueriesCollection,
+    pub accounts: TonQueriesCollection,
+    pub transactions: TonQueriesCollection,
+    pub messages: TonQueriesCollection,
+}
+
+impl TonQueries {
+    pub(crate) fn new(context: InteropContext) -> TonQueries {
+        TonQueries {
+            context,
+            blocks: TonQueriesCollection::new(context, "blocks"),
+            accounts: TonQueriesCollection::new(context, "accounts"),
+            transactions: TonQueriesCollection::new(context, "transactions"),
+            messages: TonQueriesCollection::new(context, "messages"),
+        }
+    }
+}
+
+pub struct TonQueriesSubscription {
+}
+
+impl TonQueriesSubscription {
+    pub fn cancel() {
+    }
+}
+
+pub struct TonQueriesCollection {
+    context: InteropContext,
+    pub name: String
+}
+
+impl TonQueriesCollection {
+    pub(crate) fn new(context: InteropContext, name: &str) -> TonQueriesCollection {
+        TonQueriesCollection {
+            context,
+            name: name.to_string()
+        }
+    }
+
+    pub fn query(filter: Value, order_by: Value, limit: usize) -> TonResult<Vec<Value>> {
+        panic!("Not Implemented")
+    }
+
+    pub fn wait_for(filter: Value, order_by: Value, limit: usize) -> TonResult<Vec<Value>> {
+        panic!("Not Implemented")
+    }
+
+    pub fn subscribe(filter: Value) -> TonResult<TonQueriesSubscription> {
+        panic!("Not Implemented")
+    }
+}
