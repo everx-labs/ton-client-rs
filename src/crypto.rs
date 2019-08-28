@@ -1,5 +1,6 @@
-use crate::interop::InteropContext;
+use crate::interop::{InteropContext, Interop};
 use serde::{Serialize, Serializer};
+use crate::KeyPair;
 
 #[derive(Clone)]
 pub struct HDPublic(pub [u8; 33]);
@@ -49,6 +50,9 @@ pub struct TonCrypto {
 impl TonCrypto {
     pub(crate) fn new(context: InteropContext) -> Self {
         Self { context }
+    }
+    pub fn generate_ed25519_keys(&self) -> KeyPair {
+        Interop::json_request_no_args(self.context, "crypto.ed25519.keypair").unwrap()
     }
 }
 

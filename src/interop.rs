@@ -133,6 +133,27 @@ impl Interop {
         }
     }
 
+    pub fn json_request_no_args<R: DeserializeOwned>(
+        context: InteropContext,
+        method_name: &str,
+    ) -> TonResult<R> {
+        let response = Self::interop_json_request(
+            context,
+            &method_name.to_string(),
+            &String::new());
+        if response.error_json.is_empty() {
+            let result: Result<R, serde_json::Error> = serde_json::from_str(&response.result_json);
+            result.map_err(|err|TonError::invalid_response_result(method_name, &response.result_json))
+        } else {
+            let result: Result<TonError, serde_json::Error> = serde_json::from_str(&response.error_json);
+            match result {
+                Ok(err) => Err(err),
+                Err(err) => Err(TonError::invalid_response_error(method_name, &response.error_json))
+            }
+
+        }
+    }
+
     fn interop_json_request(
         context: InteropContext,
         method_name: &String,

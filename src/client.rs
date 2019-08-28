@@ -19,20 +19,34 @@ pub struct TonClient {
 }
 
 impl TonClient {
-    pub fn new(config: &TonClientConfig) -> TonResult<TonClient> {
+    pub fn new(config: &TonClientConfig) -> TonClient {
         let context = Interop::create_context();
-        let mut client = TonClient {
+        let client = TonClient {
             context,
             crypto: TonCrypto::new(context),
             contracts: TonContracts::new(context),
             queries: TonQueries::new(context),
         };
         client.setup(config);
-        Ok(client)
+        client
     }
 
-    pub fn default() -> TonResult<TonClient> {
+    pub fn new_with_base_url(base_url: &str) -> TonClient {
+        Self::new(&TonClientConfig {
+            base_url: Some(base_url.to_string()),
+            requests_url: None,
+            queries_url: None,
+            subscriptions_url: None,
+            default_workchain: Some(0)
+        })
+    }
+
+    pub fn default() -> TonClient {
         Self::new(&TonClientConfig::default())
+    }
+
+    pub fn get_client_version(&self) -> String {
+        Interop::json_request_no_args(self.context, "version").unwrap()
     }
 
     pub fn setup(&self, config: &TonClientConfig) -> TonResult<()> {
