@@ -1,7 +1,79 @@
+extern crate curl;
+extern crate flate2;
+
 use std::env;
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::{Path, PathBuf};
+use std::io::Write;
+
+use flate2::read::GzDecoder;
+use curl::easy::Easy;
 
 fn main() {
-    let root = env!("CARGO_MANIFEST_DIR");
-    println!("cargo:rustc-link-search=native={}", root);
+    let out = env::var("OUT_DIR").unwrap();
+    println!("cargo:rustc-link-search=native={}", out);
     println!("cargo:rustc-link-lib=dylib=tonclient");
+
+    install_binaries();
+}
+
+fn extract<P: AsRef<Path>, P2: AsRef<Path>>(archive_path: P, extract_to: P2) {
+    let file = File::open(archive_path).unwrap();
+    let mut unzipped = GzDecoder::new(file);
+    let mut target_file = File::create(extract_to).unwrap();
+    std::io::copy(&mut unzipped, &mut target_file).unwrap();
+}
+
+fn download_file(file_name: &str, download_dir: &PathBuf) {
+    let binary_url = format!("http://sdkbinaries.tonlabs.io/{}", file_name);
+
+    let file_name = download_dir.join(file_name);
+
+    if !file_name.exists() {
+        let f = File::create(&file_name).unwrap();
+        let mut writer = BufWriter::new(f);
+        let mut easy = Easy::new();
+        easy.url(&binary_url).unwrap();
+        easy.write_function(move |data| Ok(writer.write(data).unwrap()))
+            .unwrap();
+        easy.perform().unwrap();
+
+        let response_code = easy.response_code().unwrap();
+        if response_code != 200 {
+            panic!(
+                "Unexpected response code {} for {}",
+                response_code, binary_url
+            );
+        }
+    }
+}
+
+// Downloads and unpacks a prebuilt binary
+fn install_binaries() {
+    // Figure out the file names.
+    let version = env!("CARGO_PKG_VERSION").replace(".", "_");
+    let files = if cfg!(target_os="windows") {
+        vec![
+            (format!("tonclient_{}_win32_dll.gz", version), "tonclient.dll"),
+            (format!("tonclient_{}_win32_lib.gz", version), "tonclient.lib")
+        ]
+    } else if cfg!(target_os="linux") {
+        vec![(format!("tonclient_{}_linux.gz", version), "libtonclient.so")]
+    } else if cfg!(target_os="macos") {
+        vec![(format!("tonclient_{}_darwin.gz", version), "libtonclient.dylib")]
+    } else {
+        panic!("Unknown target OS");
+    };
+
+    let out = PathBuf::from(env::var("OUT_DIR").unwrap());
+
+    for (file, target) in &files {
+        download_file(&file, &out);
+        extract(out.join(file), out.join(target));
+    }
+
+    let dylib_src_path = out.join(&files[0].1);
+    let dylib_dst_path = format!("{}/../../../{}", out.to_str().unwrap(), &files[0].1);
+    std::fs::copy(dylib_src_path, dylib_dst_path).expect("Couldn't copy dylib");
 }
