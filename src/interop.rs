@@ -3,7 +3,7 @@ use std::ptr::null;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-#[link(name = "tonclient")]
+#[link(name = "ton_client")]
 extern "C" {
     fn tc_create_context() -> InteropContext;
     fn tc_destroy_context(context: InteropContext);

@@ -10,10 +10,12 @@ use std::io::Write;
 use flate2::read::GzDecoder;
 use curl::easy::Easy;
 
+const BINARIES_URL: &str = "http://sdkbinaries.tonlabs.io";
+
 fn main() {
     let out = env::var("OUT_DIR").unwrap();
     println!("cargo:rustc-link-search=native={}", out);
-    println!("cargo:rustc-link-lib=dylib=tonclient");
+    println!("cargo:rustc-link-lib=dylib=ton_client");
 
     install_binaries();
 }
@@ -26,7 +28,7 @@ fn extract<P: AsRef<Path>, P2: AsRef<Path>>(archive_path: P, extract_to: P2) {
 }
 
 fn download_file(file_name: &str, download_dir: &PathBuf) {
-    let binary_url = format!("http://sdkbinaries.tonlabs.io/{}", file_name);
+    let binary_url = format!("{}/{}", BINARIES_URL, file_name);
 
     let file_name = download_dir.join(file_name);
 
@@ -55,13 +57,13 @@ fn install_binaries() {
     let version = env!("CARGO_PKG_VERSION").replace(".", "_");
     let files = if cfg!(target_os="windows") {
         vec![
-            (format!("tonclient_{}_win32_dll.gz", version), "tonclient.dll"),
-            (format!("tonclient_{}_win32_lib.gz", version), "tonclient.lib")
+            (format!("tonclient_{}_win32_dll.gz", version), "ton_client.dll"),
+            (format!("tonclient_{}_win32_lib.gz", version), "ton_client.lib")
         ]
     } else if cfg!(target_os="linux") {
-        vec![(format!("tonclient_{}_linux.gz", version), "libtonclient.so")]
+        vec![(format!("tonclient_{}_linux.gz", version), "libton_client.so")]
     } else if cfg!(target_os="macos") {
-        vec![(format!("tonclient_{}_darwin.gz", version), "libtonclient.dylib")]
+        vec![(format!("tonclient_{}_darwin.gz", version), "libton_client.dylib")]
     } else {
         panic!("Unknown target OS");
     };
@@ -72,8 +74,4 @@ fn install_binaries() {
         download_file(&file, &out);
         extract(out.join(file), out.join(target));
     }
-
-    let dylib_src_path = out.join(&files[0].1);
-    let dylib_dst_path = format!("{}/../../../{}", out.to_str().unwrap(), &files[0].1);
-    std::fs::copy(dylib_src_path, dylib_dst_path).expect("Couldn't copy dylib");
 }
