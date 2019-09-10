@@ -1,8 +1,16 @@
 [package]
 name = "ton-client-rs"
 version = "0.11.0"
+description = "TON SDK Client Library for Rust"
 authors = ["TON DEV SOLUTIONS LTD <support@tonlabs.io>"]
 edition = "2018"
+readme = "README.md"
+license-file = "LICENSE"
+homepage = "https://ton.dev"
+repository = "https://github.com/tonlabs/ton-client-rs"
+documentation = "https://docs.ton.dev"
+keywords = ["TON", "cryptography", "network"]
+categories = ["blockchain", "SDK", "cryptography"]
 build = "build.rs"
 
 [dependencies]
