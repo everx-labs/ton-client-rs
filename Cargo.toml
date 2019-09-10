@@ -10,7 +10,6 @@ homepage = "https://ton.dev"
 repository = "https://github.com/tonlabs/ton-client-rs"
 documentation = "https://docs.ton.dev"
 keywords = ["TON", "cryptography", "network"]
-categories = ["blockchain", "SDK", "cryptography"]
 build = "build.rs"
 
 [dependencies]
