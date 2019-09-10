@@ -25,7 +25,15 @@ pub(crate) struct ParamsOfDeploy {
     pub keyPair: Ed25519KeyPair,
 }
 
-/// Result of `deploy` function running. Contains address of the contract deployed
+#[derive(Serialize)]
+#[allow(non_snake_case)]
+pub(crate) struct ParamsOfGetDeployAddress {
+    pub abi: serde_json::Value,
+    pub imageBase64: String,
+    pub keyPair: Ed25519KeyPair,
+}
+
+/// Result of `deploy` and `get_deploy_address` function running. Contains address of the contract
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 pub struct ResultOfDeploy {
@@ -59,11 +67,28 @@ impl TonContracts {
         Self { context }
     }
 
+    /// Get address for contract deploying
+    pub fn get_deploy_address(
+        &self,
+        code: &[u8],
+        keys: &Ed25519KeyPair,
+    ) -> TonResult<TonAddress> {
+        let result: TonAddress = Interop::json_request(
+            self.context,
+            "contracts.deploy.address",
+            ParamsOfGetDeployAddress {
+                abi: Value::Null,
+                imageBase64: base64::encode(code),
+                keyPair: keys.clone(),
+            })?;
+        Ok(result)
+    }
+
     /// Deploy contract to TON blockchain
     pub fn deploy(
         &self,
         abi: &str,
-        code_base64: &str,
+        code: &[u8],
         constructor_params: Value,
         keys: &Ed25519KeyPair,
     ) -> TonResult<TonAddress> {
@@ -72,7 +97,7 @@ impl TonContracts {
         let result: ResultOfDeploy = Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
             abi,
             constructorParams: constructor_params,
-            imageBase64: code_base64.to_string(),
+            imageBase64: base64::encode(code),
             keyPair: keys.clone(),
         })?;
         Ok(result.address)

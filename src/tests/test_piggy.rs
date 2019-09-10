@@ -20,12 +20,14 @@ fn test_piggy() {
     let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
-    let wallet_address = ton.contracts.deploy(WALLET_ABI, WALLET_CODE_BASE64,
+    let wallet_address = ton.contracts.deploy(
+        WALLET_ABI,
+        &base64::decode(WALLET_CODE_BASE64).unwrap(),
         json!({}), &keypair).unwrap();
 
     let piggy_bank_address = ton.contracts.deploy(
         PIGGY_BANK_ABI,
-        PIGGY_BANK_CODE_BASE64,
+        &base64::decode(PIGGY_BANK_CODE_BASE64).unwrap(),
         json!({
 	        "amount": 123,
 	        "goal": [83, 111, 109, 101, 32, 103, 111, 97, 108]
@@ -44,7 +46,7 @@ fn test_piggy() {
     let subscription_constructor_params = json!({ "wallet" : format!("x{}", wallet_address)});
     let subscripition_address = ton.contracts.deploy(
         SUBSCRIBE_ABI,
-        SUBSCRIBE_CODE_BASE64,
+        &base64::decode(SUBSCRIBE_CODE_BASE64).unwrap(),
         subscription_constructor_params,
         &keypair,
     ).unwrap();

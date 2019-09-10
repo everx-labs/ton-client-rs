@@ -18,7 +18,7 @@ use serde::de::Visitor;
 /// Enum representing possible TON blockchain internal account addresses.
 /// For now only `StdShort` address is supported by core library so all variants are 
 /// come down to `StdShort` variant while calling core library
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum TonAddress {
     StdShort([u8; 32]),
     StdFull(i8, [u8; 32]),

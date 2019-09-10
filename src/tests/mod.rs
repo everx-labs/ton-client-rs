@@ -24,13 +24,20 @@ fn test_contracts() {
         "secret": "4f255abd8da7dcf1fbc94ae2e2742d350621a99a4bd53592661f22ec25bf1d23"
     }"#).unwrap();
 
-    let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
+    let ton = TonClient::new_with_base_url("http://192.168.99.100").unwrap();
     assert_eq!("0.11.0", ton.get_client_version());
+	    
+	let prepared_wallet_address = ton.contracts.get_deploy_address(
+        &base64::decode(WALLET_CODE_BASE64).unwrap(),
+        &keys).unwrap();
+
     let address = ton.contracts.deploy(
         WALLET_ABI,
-        WALLET_CODE_BASE64,
+        &base64::decode(WALLET_CODE_BASE64).unwrap(),
         json!({}),
         &keys).unwrap();
+
+	assert_eq!(prepared_wallet_address, address);
 
     let version = ton.contracts.run(
         &address,
