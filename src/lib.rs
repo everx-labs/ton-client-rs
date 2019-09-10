@@ -15,9 +15,10 @@
 #[macro_use]
 extern crate serde_derive;
 
-extern crate serde;
+#[cfg(test)]
 #[macro_use]
 extern crate serde_json;
+extern crate serde;
 extern crate base64;
 
 
@@ -25,6 +26,8 @@ extern crate base64;
 mod tests;
 
 mod types;
+pub use types::*;
+
 mod interop;
 
 mod client;
@@ -36,21 +39,8 @@ pub use crypto::*;
 mod contracts;
 pub use contracts::*;
 
-mod queries;
-pub use queries::*;
-
-#[allow(non_snake_case)]
-#[derive(Serialize, Deserialize, Clone)]
-pub struct KeyPair {
-    pub public: String,
-    pub secret: String,
-}
-
-impl KeyPair {
-    pub fn new(public: String, secret: String) -> KeyPair {
-        KeyPair { public, secret }
-    }
-}
+//mod queries;
+//pub use queries::*;
 
 #[derive(Debug, Deserialize)]
 pub struct TonError {
@@ -62,17 +52,6 @@ pub struct TonError {
 
 
 impl TonError {
-    pub(crate) fn check<R>(ok: bool, r: R) -> TonResult<R> {
-        if ok {
-            Ok(r)
-        } else {
-            Err(Self {
-                source: "sdk".to_string(),
-                code: 0,
-                message: String::new(),
-            })
-        }
-    }
 
     fn sdk(code: u32, message: &str) -> Self {
         Self {

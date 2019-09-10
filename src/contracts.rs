@@ -12,41 +12,44 @@
  * limitations under the License.
  */
 
-use crate::{Ed25519KeySource, TonResult, Ed25519Public, KeyPair, TonError};
+use crate::{Ed25519KeyPair, TonResult, TonError, TonAddress};
 use serde_json::Value;
 use crate::interop::{InteropContext, Interop};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 #[allow(non_snake_case)]
 pub(crate) struct ParamsOfDeploy {
     pub abi: serde_json::Value,
     pub constructorParams: serde_json::Value,
     pub imageBase64: String,
-    pub keyPair: KeyPair,
+    pub keyPair: Ed25519KeyPair,
 }
 
+/// Result of `deploy` function running. Contains address of the contract deployed
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 pub struct ResultOfDeploy {
-    pub address: String,
+    pub address: TonAddress,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 #[allow(non_snake_case)]
-pub struct ParamsOfRun {
-    pub address: String,
+pub(crate) struct ParamsOfRun {
+    pub address: TonAddress,
     pub abi: serde_json::Value,
     pub functionName: String,
     pub input: serde_json::Value,
-    pub keyPair: Option<KeyPair>,
+    pub keyPair: Option<Ed25519KeyPair>,
 }
 
+/// Result of `run` function running. Contains parameters returned by contract function
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 pub struct ResultOfRun {
     pub output: Value
 }
 
+/// Contract management struct
 pub struct TonContracts {
     context: InteropContext,
 }
@@ -56,15 +59,16 @@ impl TonContracts {
         Self { context }
     }
 
+    /// Deploy contract to TON blockchain
     pub fn deploy(
         &self,
         abi: &str,
         code_base64: &str,
         constructor_params: Value,
-        keys: &KeyPair,
-    ) -> TonResult<String> {
+        keys: &Ed25519KeyPair,
+    ) -> TonResult<TonAddress> {
         let abi = serde_json::from_str(abi)
-            .map_err(|err|TonError::invalid_params("deploy"))?;
+            .map_err(|_|TonError::invalid_params("deploy"))?;
         let result: ResultOfDeploy = Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
             abi,
             constructorParams: constructor_params,
@@ -74,18 +78,19 @@ impl TonContracts {
         Ok(result.address)
     }
 
+    /// Run the contract function with given parameters
     pub fn run(
         &self,
-        address: &str,
+        address: &TonAddress,
         abi: &str,
         function_name: &str,
         input: Value,
-        keys: Option<&KeyPair>,
+        keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
-            .map_err(|err|TonError::invalid_params("deploy"))?;
+            .map_err(|_|TonError::invalid_params("run"))?;
         let result: ResultOfRun = Interop::json_request(self.context, "contracts.run", ParamsOfRun {
-            address: address.to_string(),
+            address: address.clone(),
             abi,
             functionName: function_name.to_string(),
             input,

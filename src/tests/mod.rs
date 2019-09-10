@@ -12,20 +12,19 @@
  * limitations under the License.
  */
 
-use crate::{TonClient, KeyPair};
-use serde::*;
+use crate::{TonClient, Ed25519KeyPair};
 mod test_piggy;
 
 #[test]
 fn test_contracts() {
     // Deploy Messages
 
-    let keys = KeyPair {
-        public: "d59bdd49a40013f6335753eb19b34b37f42ca25df8a44bd7388882ab57019dd1".to_string(),
-        secret: "4f255abd8da7dcf1fbc94ae2e2742d350621a99a4bd53592661f22ec25bf1d23".to_string()
-    };
+    let keys: Ed25519KeyPair = serde_json::from_str(r#"{
+        "public": "d59bdd49a40013f6335753eb19b34b37f42ca25df8a44bd7388882ab57019dd1",
+        "secret": "4f255abd8da7dcf1fbc94ae2e2742d350621a99a4bd53592661f22ec25bf1d23"
+    }"#).unwrap();
 
-    let ton = TonClient::new_with_base_url("http://0.0.0.0");
+    let ton = TonClient::new_with_base_url("http://192.168.99.100").unwrap();
     assert_eq!("0.11.0", ton.get_client_version());
     let address = ton.contracts.deploy(
         WALLET_ABI,
@@ -34,7 +33,7 @@ fn test_contracts() {
         &keys).unwrap();
 
     let version = ton.contracts.run(
-        address.as_str(),
+        &address,
         WALLET_ABI,
         "getVersion",
         json!({}),

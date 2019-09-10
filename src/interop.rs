@@ -13,7 +13,6 @@
  */
 
 use crate::{TonResult, TonError};
-use std::ptr::null;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -25,13 +24,13 @@ extern "C" {
         context: InteropContext,
         method_name: InteropString,
         params_json: InteropString,
-    ) -> *const JsonResponse;
+    ) -> *const InteropJsonResponseHandle;
     fn tc_destroy_json_response(
-        response: *const JsonResponse
+        response: *const InteropJsonResponseHandle
     );
 
     fn tc_read_json_response(
-        response: *const JsonResponse
+        response: *const InteropJsonResponseHandle
     ) -> InteropJsonResponse;
 }
 
@@ -40,19 +39,24 @@ extern "C" {
 pub type InteropContext = u32;
 
 #[repr(C)]
-pub struct InteropString {
+pub(crate) struct InteropString {
     pub content: *const u8,
     pub len: u32,
 }
 
 
 #[repr(C)]
-pub struct InteropJsonResponse {
+pub(crate) struct InteropJsonResponse {
     pub result_json: InteropString,
     pub error_json: InteropString,
 }
 
-pub struct JsonResponse {
+#[repr(C)]
+struct InteropJsonResponseHandle {
+    dummy: u32
+}
+
+pub(crate) struct JsonResponse {
     pub result_json: String,
     pub error_json: String,
 }
@@ -60,13 +64,6 @@ pub struct JsonResponse {
 // Helpers
 
 impl InteropString {
-    pub(crate) fn default() -> Self {
-        Self {
-            content: null(),
-            len: 0
-        }
-    }
-
     pub(crate) fn from(s: &String) -> Self {
         Self {
             content: s.as_ptr(),
@@ -84,20 +81,6 @@ impl InteropString {
 }
 
 impl InteropJsonResponse {
-    pub(crate) fn default() -> Self {
-        Self {
-            result_json: InteropString::default(),
-            error_json: InteropString::default(),
-        }
-    }
-
-    pub(crate) fn from(response: &JsonResponse) -> Self {
-        Self {
-            result_json: InteropString::from(&response.result_json),
-            error_json: InteropString::from(&response.error_json),
-        }
-    }
-
     pub(crate) fn to_response(&self) -> JsonResponse {
         JsonResponse {
             result_json: self.result_json.to_string(),
@@ -130,12 +113,12 @@ impl Interop {
             &params_json);
         if response.error_json.is_empty() {
             let result: Result<R, serde_json::Error> = serde_json::from_str(&response.result_json);
-            result.map_err(|err| TonError::invalid_response_result(method_name, &response.result_json))
+            result.map_err(|_| TonError::invalid_response_result(method_name, &response.result_json))
         } else {
             let result: Result<TonError, serde_json::Error> = serde_json::from_str(&response.error_json);
             match result {
                 Ok(err) => Err(err),
-                Err(err) => Err(TonError::invalid_response_error(method_name, &response.error_json))
+                Err(_) => Err(TonError::invalid_response_error(method_name, &response.error_json))
             }
         }
     }
@@ -146,7 +129,7 @@ impl Interop {
         params: P
     ) -> TonResult<R> {
         let params_json = serde_json::to_string(&params)
-            .map_err(|err|TonError::invalid_params(method_name))?;
+            .map_err(|_|TonError::invalid_params(method_name))?;
         Self::base_json_request(context, method_name, params_json)
     }
 

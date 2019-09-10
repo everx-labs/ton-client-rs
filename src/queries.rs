@@ -11,6 +11,7 @@
  * See the License for the specific TON DEV software governing permissions and
  * limitations under the License.
  */
+#![allow(dead_code)]
 
 use crate::interop::InteropContext;
 use serde_json::Value;

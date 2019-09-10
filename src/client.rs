@@ -13,8 +13,14 @@
  */
 
 use crate::interop::Interop;
-use crate::{TonCrypto, TonContracts, TonResult, TonQueries};
+use crate::{TonCrypto, TonContracts, TonResult};
 
+/// `TonClient` configuration. Contains optional fields with configuration parameters.
+/// `default_workchain` sets target workchain for deploying and running contracts
+/// `base_url` is used for deriving `requests_url`, `queries_url` and `subscriptions_url` values with default suffixes if ones are not set.
+/// `requests_url` points address for sending requests to node via http REST API
+/// `queries_url` points address of GraphQL server for quering blockchain data
+/// `subscriptions_url` points address of GraphQL server for subscripitions on blockchain data updates
 #[derive(Default, Serialize)]
 #[serde(rename_all="camelCase")]
 pub struct TonClientConfig {
@@ -25,27 +31,29 @@ pub struct TonClientConfig {
     pub subscriptions_url: Option<String>,
 }
 
+/// Entry point for TON blockchain interaction. Provides useful methods for TON clients
 pub struct TonClient {
     context: u32,
     pub crypto: TonCrypto,
     pub contracts: TonContracts,
-    pub queries: TonQueries,
 }
 
 impl TonClient {
-    pub fn new(config: &TonClientConfig) -> TonClient {
+    /// Create `TonClient` instance with full configuration.
+    pub fn new(config: &TonClientConfig) -> TonResult<TonClient> {
         let context = Interop::create_context();
         let client = TonClient {
             context,
             crypto: TonCrypto::new(context),
             contracts: TonContracts::new(context),
-            queries: TonQueries::new(context),
         };
-        client.setup(config);
-        client
+        client.setup(config)?;
+        Ok(client)
     }
 
-    pub fn new_with_base_url(base_url: &str) -> TonClient {
+    /// Create `TonClient` instance with base URL only. Other URLs are derived from base URL.write!
+    /// `default_workchain` is set to 0.
+    pub fn new_with_base_url(base_url: &str) -> TonResult<TonClient> {
         Self::new(&TonClientConfig {
             base_url: Some(base_url.to_string()),
             requests_url: None,
@@ -55,15 +63,24 @@ impl TonClient {
         })
     }
 
-    pub fn default() -> TonClient {
+    /// Create `TonClient` instance with default parameters.
+    pub fn default() -> TonResult<TonClient> {
         Self::new(&TonClientConfig::default())
     }
 
+    /// Get version of the library
     pub fn get_client_version(&self) -> String {
         Interop::json_request_no_args(self.context, "version").unwrap()
     }
 
+    /// Set parameters for node interaction
     pub fn setup(&self, config: &TonClientConfig) -> TonResult<()> {
         Interop::json_request(self.context, "setup", config)
+    }
+}
+
+impl Drop for TonClient {
+    fn drop(&mut self) {
+        Interop::destroy_context(self.context);
     }
 }

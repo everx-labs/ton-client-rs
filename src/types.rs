@@ -12,13 +12,16 @@
  * limitations under the License.
  */
 
-use serde::{Serialize, Serializer};
+use serde::{Serialize, Serializer, Deserialize, Deserializer};
+use serde::de::Visitor;
 
+/// Enum representing possible TON blockchain internal account addresses.
+/// For now only `StdShort` address is supported by core library so all variants are 
+/// come down to `StdShort` variant while calling core library
 #[derive(Clone)]
 pub enum TonAddress {
-    ExternalNone,
-    External(Vec<u8>),
-    Std(i8, [u8; 32]),
+    StdShort([u8; 32]),
+    StdFull(i8, [u8; 32]),
     Var(i32, Vec<u8>),
     AnycastStd(u8, u32, i8, [u8; 32]),
     AnycastVar(u8, u32, i32, Vec<u8>),
@@ -27,18 +30,51 @@ pub enum TonAddress {
 impl Serialize for TonAddress {
     fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
         S: Serializer {
-        serializer.serialize_str(&format!("{}", self))
+        //serializer.serialize_str(&format!("{}", self))
+        // for now only StdShort address is supported
+        serializer.serialize_str(&self.get_account_hex_string())
+    }
+}
+
+pub struct AddressVisitor;
+
+impl<'de> Visitor<'de> for AddressVisitor {
+    type Value = TonAddress;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("32 bytes written into string like a hex values without spaces")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: serde::de::Error {
+        // for now only StdShort address is supported
+        let mut result = [0u8; 32];
+        let vec = hex::decode(v)
+            .map_err(|err| serde::de::Error::custom(format!("error decode hex: {}", err)))?;
+        if vec.len() != 32 {
+            return Err(serde::de::Error::custom(format!("Wrong data length")));
+        }
+
+        result.copy_from_slice(&vec);
+        Ok(TonAddress::StdShort(result))
+    }
+}
+
+impl<'de> Deserialize<'de> for TonAddress {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>, 
+    {
+        deserializer.deserialize_str(AddressVisitor)
     }
 }
 
 impl TonAddress {
+    /// Returns hex-string representation of account ID (not fully qualified address)
     pub fn get_account_hex_string(&self) -> String {
         match self {
-            TonAddress::ExternalNone =>
-                String::new(),
-            TonAddress::External(a) =>
+            TonAddress::StdShort(a) =>
                 hex::encode(a),
-            TonAddress::Std(_, a) =>
+            TonAddress::StdFull(_, a) =>
                 hex::encode(a),
             TonAddress::Var(_, a) =>
                 hex::encode(a),
@@ -56,13 +92,13 @@ fn fmt_addr(
     workchain: Option<i32>,
     address: Option<&[u8]>) -> Result<(), std::fmt::Error> {
     if let Some((d, p)) = anycast {
-        write!(f, "{}:{}:", d, p);
+        write!(f, "{}:{}:", d, p)?
     }
     if let Some(w) = workchain {
-        write!(f, "{}:", w);
+        write!(f, "{}:", w)?
     }
     if let Some(a) = address {
-        write!(f, "{}", hex::encode(a));
+        write!(f, "{}", hex::encode(a))?
     }
     Ok(())
 }
@@ -70,11 +106,9 @@ fn fmt_addr(
 impl std::fmt::Display for TonAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            TonAddress::ExternalNone =>
-                fmt_addr(f, None, None, None),
-            TonAddress::External(a) =>
+            TonAddress::StdShort( a) =>
                 fmt_addr(f, None, None, Some(a)),
-            TonAddress::Std(w, a) =>
+            TonAddress::StdFull(w, a) =>
                 fmt_addr(f, None, Some(*w as i32), Some(a)),
             TonAddress::Var(w, a) =>
                 fmt_addr(f, None, Some(*w), Some(a)),
