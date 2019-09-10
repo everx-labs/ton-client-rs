@@ -18,13 +18,15 @@ use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde::de::Visitor;
 
 #[derive(Clone)]
-pub struct HDPublic(pub [u8; 33]);
+struct HDPublic(pub [u8; 33]);
 #[derive(Clone)]
-pub struct NaclNonce(pub [u8; 24]);
+struct NaclNonce(pub [u8; 24]);
 #[derive(Clone)]
-pub struct NaclSignSecret(pub [u8; 64]);
+struct NaclSignSecret(pub [u8; 64]);
+/// Ed25519 public key
 #[derive(Clone)]
 pub struct Ed25519Public(pub [u8; 32]);
+/// Ed25519 secret key
 #[derive(Clone)]
 pub struct Ed25519Secret(pub [u8; 32]);
 
@@ -58,18 +60,20 @@ impl Ed25519KeyPair {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Serialize)]
-pub enum Ed25519KeySource {
+enum Ed25519KeySource {
     Keys(Ed25519KeyPair),
     KeyStoreHandle(u32),
 }
 
 #[derive(Clone)]
-pub struct NaclSignKeyPair {
+struct NaclSignKeyPair {
     pub public: Ed25519Public,
     pub secret: NaclSignSecret,
 }
 
+#[allow(dead_code)]
 impl NaclSignKeyPair {
     pub fn zero() -> NaclSignKeyPair {
         NaclSignKeyPair { public: Ed25519Public([0u8; 32]), secret: NaclSignSecret([0u8; 64]) }
@@ -144,7 +148,7 @@ impl Serialize for Ed25519Secret {
     }
 }
 
-pub struct KeysVisitor;
+struct KeysVisitor;
 
 impl<'de> Visitor<'de> for KeysVisitor {
     type Value = [u8; 32];

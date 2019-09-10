@@ -16,10 +16,16 @@ use crate::interop::Interop;
 use crate::{TonCrypto, TonContracts, TonResult};
 
 /// `TonClient` configuration. Contains optional fields with configuration parameters.
+/// 
 /// `default_workchain` sets target workchain for deploying and running contracts
-/// `base_url` is used for deriving `requests_url`, `queries_url` and `subscriptions_url` values with default suffixes if ones are not set.
+/// 
+/// `base_url` is used for deriving `requests_url`, `queries_url` and `subscriptions_url`
+///  values with default suffixes if ones are not set.
+/// 
 /// `requests_url` points address for sending requests to node via http REST API
+/// 
 /// `queries_url` points address of GraphQL server for quering blockchain data
+/// 
 /// `subscriptions_url` points address of GraphQL server for subscripitions on blockchain data updates
 #[derive(Default, Serialize)]
 #[serde(rename_all="camelCase")]

@@ -36,7 +36,7 @@ impl Serialize for TonAddress {
     }
 }
 
-pub struct AddressVisitor;
+struct AddressVisitor;
 
 impl<'de> Visitor<'de> for AddressVisitor {
     type Value = TonAddress;
