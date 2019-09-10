@@ -17,7 +17,7 @@ use crate::tests::{WALLET_ABI, WALLET_CODE_BASE64};
 
 #[test]
 fn test_piggy() {
-    let ton = TonClient::new_with_base_url("http://192.168.99.100").unwrap();
+    let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
     let wallet_address = ton.contracts.deploy(WALLET_ABI, WALLET_CODE_BASE64,
