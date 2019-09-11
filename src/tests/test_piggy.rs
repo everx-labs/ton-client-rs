@@ -23,7 +23,7 @@ fn test_piggy() {
     let wallet_address = ton.contracts.deploy(
         WALLET_ABI,
         &base64::decode(WALLET_CODE_BASE64).unwrap(),
-        json!({}), &keypair).unwrap();
+        json!({}).to_string().into(), &keypair).unwrap();
 
     let piggy_bank_address = ton.contracts.deploy(
         PIGGY_BANK_ABI,
@@ -31,7 +31,7 @@ fn test_piggy() {
         json!({
 	        "amount": 123,
 	        "goal": [83, 111, 109, 101, 32, 103, 111, 97, 108]
-        }),
+        }).to_string().into(),
         &keypair,
     ).unwrap();
 
@@ -39,18 +39,18 @@ fn test_piggy() {
         &piggy_bank_address,
         PIGGY_BANK_ABI,
         "getGoal",
-        json!({}), None).unwrap();
+        json!({}).to_string().into(), None).unwrap();
 
     println!("getGoal answer {}", get_goal_answer);
 
-    let subscription_constructor_params = json!({ "wallet" : format!("x{}", wallet_address)});
+    let subscription_constructor_params = json!({ "wallet" : format!("x{}", wallet_address)}).to_string().into();
     let subscripition_address = ton.contracts.deploy(
         SUBSCRIBE_ABI,
         &base64::decode(SUBSCRIBE_CODE_BASE64).unwrap(),
         subscription_constructor_params,
         &keypair,
     ).unwrap();
-    let set_subscription_params = json!({ "address": format!("x{}", subscripition_address) });
+    let set_subscription_params = json!({ "address": format!("x{}", subscripition_address) }).to_string().into();
 
     let _set_subscription_answer = ton.contracts.run(
         &wallet_address,
@@ -72,7 +72,7 @@ fn test_piggy() {
             "to": format!("x{}", piggy_bank_address),
             "value" : 123,
             "period" : 456
-        }),
+        }).to_string().into(),
         Some(&keypair)
     ).unwrap();
 
@@ -87,7 +87,7 @@ fn test_piggy() {
             "to": format!("x{}", piggy_bank_address),
             "value" : 5000000000 as i64,
             "period" : 86400
-        }),
+        }).to_string().into(),
         Some(&keypair)
     ).unwrap();
 
@@ -97,7 +97,7 @@ fn test_piggy() {
         "getSubscription",
         json!({
             "subscriptionId" : format!("x{}", subscr_id_str),
-        }),
+        }).to_string().into(),
         Some(&keypair)
     ).unwrap();
 

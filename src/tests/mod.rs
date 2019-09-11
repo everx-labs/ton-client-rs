@@ -15,6 +15,8 @@
 use crate::{TonClient, Ed25519KeyPair};
 mod test_piggy;
 
+const BINARIES_VERSION: &str = "0.11.0";
+
 #[test]
 fn test_contracts() {
     // Deploy Messages
@@ -24,8 +26,8 @@ fn test_contracts() {
         "secret": "4f255abd8da7dcf1fbc94ae2e2742d350621a99a4bd53592661f22ec25bf1d23"
     }"#).unwrap();
 
-    let ton = TonClient::new_with_base_url("http://192.168.99.100").unwrap();
-    assert_eq!("0.11.0", ton.get_client_version());
+    let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
+    assert_eq!(BINARIES_VERSION, ton.get_client_version());
 	    
 	let prepared_wallet_address = ton.contracts.get_deploy_address(
         &base64::decode(WALLET_CODE_BASE64).unwrap(),
@@ -34,7 +36,7 @@ fn test_contracts() {
     let address = ton.contracts.deploy(
         WALLET_ABI,
         &base64::decode(WALLET_CODE_BASE64).unwrap(),
-        json!({}),
+        json!({}).to_string().into(),
         &keys).unwrap();
 
 	assert_eq!(prepared_wallet_address, address);
@@ -43,7 +45,7 @@ fn test_contracts() {
         &address,
         WALLET_ABI,
         "getVersion",
-        json!({}),
+        json!({}).to_string().into(),
         Some(&keys)).unwrap();
     println!("{}", version)
 }

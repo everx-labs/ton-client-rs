@@ -25,6 +25,7 @@ use flate2::read::GzDecoder;
 use curl::easy::Easy;
 
 const BINARIES_URL: &str = "http://sdkbinaries.tonlabs.io";
+const BINARIES_VERSION: &str = "0.11.0";
 
 fn main() {
     let out = env::var("OUT_DIR").unwrap();
@@ -68,7 +69,8 @@ fn download_file(file_name: &str, download_dir: &PathBuf) {
 // Downloads and unpacks a prebuilt binary
 fn install_binaries() {
     // Figure out the file names.
-    let version = env!("CARGO_PKG_VERSION").replace(".", "_");
+    //let version = env!("CARGO_PKG_VERSION").replace(".", "_");
+    let version = BINARIES_VERSION.replace(".", "_");
     let files = if cfg!(target_os="windows") {
         vec![
             (format!("tonclient_{}_win32_dll.gz", version), "ton_client.dll"),

@@ -57,6 +57,18 @@ pub struct ResultOfRun {
     pub output: Value
 }
 
+/// Parameters to be passed into contract function
+pub enum RunParameters {
+     Json(String),
+    // Values(...)
+}
+
+impl<T: Into<String>> From<T> for RunParameters {
+    fn from(string: T) -> Self {
+        RunParameters::Json(string.into())
+    }
+}
+
 /// Contract management struct
 pub struct TonContracts {
     context: InteropContext,
@@ -89,14 +101,21 @@ impl TonContracts {
         &self,
         abi: &str,
         code: &[u8],
-        constructor_params: Value,
+        constructor_params: RunParameters,
         keys: &Ed25519KeyPair,
     ) -> TonResult<TonAddress> {
         let abi = serde_json::from_str(abi)
             .map_err(|_|TonError::invalid_params("deploy"))?;
+
+        let str_params = match &constructor_params {
+            RunParameters::Json(string) => string
+        };
+        let params_value = serde_json::from_str(str_params)
+            .map_err(|_|TonError::invalid_params("deploy"))?;
+
         let result: ResultOfDeploy = Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
             abi,
-            constructorParams: constructor_params,
+            constructorParams: params_value,
             imageBase64: base64::encode(code),
             keyPair: keys.clone(),
         })?;
@@ -109,16 +128,23 @@ impl TonContracts {
         address: &TonAddress,
         abi: &str,
         function_name: &str,
-        input: Value,
+        input: RunParameters,
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
             .map_err(|_|TonError::invalid_params("run"))?;
+        
+        let str_params = match &input {
+            RunParameters::Json(string) => string
+        };
+        let params_value = serde_json::from_str(str_params)
+            .map_err(|_|TonError::invalid_params("run"))?;
+
         let result: ResultOfRun = Interop::json_request(self.context, "contracts.run", ParamsOfRun {
             address: address.clone(),
             abi,
             functionName: function_name.to_string(),
-            input,
+            input: params_value,
             keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
         })?;
         Ok(result.output)
