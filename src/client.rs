@@ -75,8 +75,8 @@ impl TonClient {
     }
 
     /// Get version of the library
-    pub fn get_client_version(&self) -> String {
-        Interop::json_request_no_args(self.context, "version").unwrap()
+    pub fn get_client_version(&self) -> TonResult<String> {
+        Interop::json_request_no_args(self.context, "version")
     }
 
     /// Set parameters for node interaction
