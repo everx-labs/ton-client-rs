@@ -25,7 +25,7 @@ use flate2::read::GzDecoder;
 use curl::easy::Easy;
 
 const BINARIES_URL: &str = "http://sdkbinaries.tonlabs.io";
-const BINARIES_VERSION: &str = "0.11.0";
+const BINARIES_VERSION: &str = "0.11.1";
 
 fn main() {
     let out = env::var("OUT_DIR").unwrap();
