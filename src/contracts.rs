@@ -50,6 +50,17 @@ pub(crate) struct ParamsOfRun {
     pub keyPair: Option<Ed25519KeyPair>,
 }
 
+#[derive(Serialize)]
+#[allow(non_snake_case)]
+pub(crate) struct ParamsOfLocalRun {
+    pub address: TonAddress,
+    pub account: Option<serde_json::Value>,
+    pub abi: serde_json::Value,
+    pub functionName: String,
+    pub input: serde_json::Value,
+    pub keyPair: Option<Ed25519KeyPair>,
+}
+
 /// Result of `run` function running. Contains parameters returned by contract function
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
@@ -142,6 +153,44 @@ impl TonContracts {
 
         let result: ResultOfRun = Interop::json_request(self.context, "contracts.run", ParamsOfRun {
             address: address.clone(),
+            abi,
+            functionName: function_name.to_string(),
+            input: params_value,
+            keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
+        })?;
+        Ok(result.output)
+    }
+
+    /// Run the contract function with given parameters locally
+    pub fn run_local(
+        &self,
+        address: &TonAddress,
+        account: Option<&str>,
+        abi: &str,
+        function_name: &str,
+        input: RunParameters,
+        keys: Option<&Ed25519KeyPair>,
+    ) -> TonResult<Value> {
+        let abi = serde_json::from_str(abi)
+            .map_err(|_|TonError::invalid_params("run_local"))?;
+        
+        let str_params = match &input {
+            RunParameters::Json(string) => string
+        };
+        let params_value = serde_json::from_str(str_params)
+            .map_err(|_|TonError::invalid_params("run_local"))?;
+
+        let account = match account {
+            Some(acc_str) => {
+                Some(serde_json::from_str(acc_str)
+                    .map_err(|_|TonError::invalid_params("run_local"))?)
+            },
+            None => None
+        };
+
+        let result: ResultOfRun = Interop::json_request(self.context, "contracts.run.local", ParamsOfLocalRun {
+            address: address.clone(),
+            account,
             abi,
             functionName: function_name.to_string(),
             input: params_value,
