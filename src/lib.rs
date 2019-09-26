@@ -39,8 +39,8 @@ pub use crypto::*;
 mod contracts;
 pub use contracts::*;
 
-//mod queries;
-//pub use queries::*;
+mod queries;
+pub use queries::*;
 
 #[derive(Debug, Deserialize)]
 pub struct TonError {

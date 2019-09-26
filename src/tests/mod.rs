@@ -27,7 +27,7 @@ fn test_contracts() {
     }"#).unwrap();
 
     let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
-    assert_eq!(BINARIES_VERSION, ton.get_client_version());
+    assert_eq!(BINARIES_VERSION, ton.get_client_version().unwrap());
 	    
 	let prepared_wallet_address = ton.contracts.get_deploy_address(
         &base64::decode(WALLET_CODE_BASE64).unwrap(),

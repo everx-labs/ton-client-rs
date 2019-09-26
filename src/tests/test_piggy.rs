@@ -12,8 +12,22 @@
  * limitations under the License.
  */
 
-use crate::TonClient;
+use crate::{TonClient, OrderBy, SortDirection};
 use crate::tests::{WALLET_ABI, WALLET_CODE_BASE64};
+use futures::stream::Stream;
+
+
+const ACCOUNT_FIELDS: &str = r#"
+    id
+    addr {
+        ...on MsgAddressIntAddrStdVariant {
+            AddrStd {
+                workchain_id
+                address
+            }
+        }
+    }
+"#;
 
 #[test]
 fn test_piggy() {
@@ -35,8 +49,53 @@ fn test_piggy() {
         &keypair,
     ).unwrap();
 
-    let get_goal_answer = ton.contracts.run(
+    // check queries on real data
+    let query_result = ton.queries.accounts.query(
+        &json!({
+            "id": {
+                "eq": piggy_bank_address.to_string()
+            }
+        }).to_string(),
+        ACCOUNT_FIELDS,
+        Some(OrderBy{ path: "id".to_owned(), direction: SortDirection::Ascending }),
+        Some(5)).unwrap();
+
+    assert_eq!(
+        query_result[0],
+        json!({
+            "id": piggy_bank_address.to_string(),
+            "addr": {
+                "AddrStd": {
+                    "address": piggy_bank_address.to_string(),
+                    "workchain_id": 0
+                }
+            }
+        }));
+
+    let wait_for_result = ton.queries.accounts.wait_for(
+        &json!({
+            "id": {
+                "eq": piggy_bank_address.to_string()
+            }
+        }).to_string(),
+        ACCOUNT_FIELDS).unwrap();
+
+    assert_eq!(
+        wait_for_result,
+        json!({
+            "id": piggy_bank_address.to_string(),
+            "addr": {
+                "AddrStd": {
+                    "address": piggy_bank_address.to_string(),
+                    "workchain_id": 0
+                }
+            }
+        }));
+
+
+    let get_goal_answer = ton.contracts.run_local(
         &piggy_bank_address,
+        None,
         PIGGY_BANK_ABI,
         "getGoal",
         json!({}).to_string().into(), None).unwrap();
@@ -51,6 +110,15 @@ fn test_piggy() {
         &keypair,
     ).unwrap();
     let set_subscription_params = json!({ "address": format!("x{}", subscripition_address) }).to_string().into();
+
+    // subscribe for updates 
+    let subscribe_stream = ton.queries.accounts.subscribe(
+        &json!({
+            "id": {
+                "eq": subscripition_address.to_string()
+            }
+        }).to_string(),
+        ACCOUNT_FIELDS).unwrap();
 
     let _set_subscription_answer = ton.contracts.run(
         &wallet_address,
@@ -75,6 +143,25 @@ fn test_piggy() {
         }).to_string().into(),
         Some(&keypair)
     ).unwrap();
+
+    // check updates
+    let subscribe_result = subscribe_stream
+        .wait()
+        .next()
+        .unwrap()
+        .unwrap();
+
+    assert_eq!(
+        subscribe_result,
+        json!({
+            "id": subscripition_address.to_string(),
+            "addr": {
+                "AddrStd": {
+                    "address": subscripition_address.to_string(),
+                    "workchain_id": 0
+                }
+            }
+        }));
 
     let subscr_id_str = hex::encode(&[0x22; 32]);
     let _subscribe_answer = ton.contracts.run(

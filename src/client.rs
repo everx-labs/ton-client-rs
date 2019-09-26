@@ -13,7 +13,7 @@
  */
 
 use crate::interop::Interop;
-use crate::{TonCrypto, TonContracts, TonResult};
+use crate::{TonCrypto, TonContracts, TonQueries, TonResult};
 
 /// `TonClient` configuration. Contains optional fields with configuration parameters.
 /// 
@@ -42,6 +42,8 @@ pub struct TonClient {
     context: u32,
     pub crypto: TonCrypto,
     pub contracts: TonContracts,
+    pub queries: TonQueries
+
 }
 
 impl TonClient {
@@ -52,6 +54,7 @@ impl TonClient {
             context,
             crypto: TonCrypto::new(context),
             contracts: TonContracts::new(context),
+            queries: TonQueries::new(context)
         };
         client.setup(config)?;
         Ok(client)
