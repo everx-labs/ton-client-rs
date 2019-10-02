@@ -12,10 +12,9 @@
  * limitations under the License.
  */
 
-use crate::{TonClient, OrderBy, SortDirection};
 use crate::tests::{WALLET_ABI, WALLET_CODE_BASE64};
+use crate::{OrderBy, SortDirection, TonClient};
 use futures::stream::Stream;
-
 
 const ACCOUNT_FIELDS: &str = r#"
     id
@@ -34,31 +33,50 @@ fn test_piggy() {
     let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
-    let wallet_address = ton.contracts.deploy(
-        WALLET_ABI,
-        &base64::decode(WALLET_CODE_BASE64).unwrap(),
-        json!({}).to_string().into(), &keypair).unwrap();
+    let wallet_address = ton
+        .contracts
+        .deploy(
+            WALLET_ABI,
+            &base64::decode(WALLET_CODE_BASE64).unwrap(),
+            json!({}).to_string().into(),
+            &keypair,
+        )
+        .unwrap();
 
-    let piggy_bank_address = ton.contracts.deploy(
-        PIGGY_BANK_ABI,
-        &base64::decode(PIGGY_BANK_CODE_BASE64).unwrap(),
-        json!({
-	        "amount": 123,
-	        "goal": [83, 111, 109, 101, 32, 103, 111, 97, 108]
-        }).to_string().into(),
-        &keypair,
-    ).unwrap();
+    let piggy_bank_address = ton
+        .contracts
+        .deploy(
+            PIGGY_BANK_ABI,
+            &base64::decode(PIGGY_BANK_CODE_BASE64).unwrap(),
+            json!({
+                "amount": 123,
+                "goal": [83, 111, 109, 101, 32, 103, 111, 97, 108]
+            })
+            .to_string()
+            .into(),
+            &keypair,
+        )
+        .unwrap();
 
     // check queries on real data
-    let query_result = ton.queries.accounts.query(
-        &json!({
-            "id": {
-                "eq": piggy_bank_address.to_string()
-            }
-        }).to_string(),
-        ACCOUNT_FIELDS,
-        Some(OrderBy{ path: "id".to_owned(), direction: SortDirection::Ascending }),
-        Some(5)).unwrap();
+    let query_result = ton
+        .queries
+        .accounts
+        .query(
+            &json!({
+                "id": {
+                    "eq": piggy_bank_address.to_string()
+                }
+            })
+            .to_string(),
+            ACCOUNT_FIELDS,
+            Some(OrderBy {
+                path: "id".to_owned(),
+                direction: SortDirection::Ascending,
+            }),
+            Some(5),
+        )
+        .unwrap();
 
     assert_eq!(
         query_result[0],
@@ -70,15 +88,22 @@ fn test_piggy() {
                     "workchain_id": 0
                 }
             }
-        }));
+        })
+    );
 
-    let wait_for_result = ton.queries.accounts.wait_for(
-        &json!({
-            "id": {
-                "eq": piggy_bank_address.to_string()
-            }
-        }).to_string(),
-        ACCOUNT_FIELDS).unwrap();
+    let wait_for_result = ton
+        .queries
+        .accounts
+        .wait_for(
+            &json!({
+                "id": {
+                    "eq": piggy_bank_address.to_string()
+                }
+            })
+            .to_string(),
+            ACCOUNT_FIELDS,
+        )
+        .unwrap();
 
     assert_eq!(
         wait_for_result,
@@ -90,66 +115,86 @@ fn test_piggy() {
                     "workchain_id": 0
                 }
             }
-        }));
+        })
+    );
 
-
-    let get_goal_answer = ton.contracts.run_local(
-        &piggy_bank_address,
-        None,
-        PIGGY_BANK_ABI,
-        "getGoal",
-        json!({}).to_string().into(), None).unwrap();
+    let get_goal_answer = ton
+        .contracts
+        .run_local(
+            &piggy_bank_address,
+            None,
+            PIGGY_BANK_ABI,
+            "getGoal",
+            json!({}).to_string().into(),
+            None,
+        )
+        .unwrap();
 
     println!("getGoal answer {}", get_goal_answer);
 
-    let subscription_constructor_params = json!({ "wallet" : format!("x{}", wallet_address)}).to_string().into();
-    let subscripition_address = ton.contracts.deploy(
-        SUBSCRIBE_ABI,
-        &base64::decode(SUBSCRIBE_CODE_BASE64).unwrap(),
-        subscription_constructor_params,
-        &keypair,
-    ).unwrap();
-    let set_subscription_params = json!({ "address": format!("x{}", subscripition_address) }).to_string().into();
+    let subscription_constructor_params = json!({ "wallet": format!("x{}", wallet_address) })
+        .to_string()
+        .into();
+    let subscripition_address = ton
+        .contracts
+        .deploy(
+            SUBSCRIBE_ABI,
+            &base64::decode(SUBSCRIBE_CODE_BASE64).unwrap(),
+            subscription_constructor_params,
+            &keypair,
+        )
+        .unwrap();
+    let set_subscription_params = json!({ "address": format!("x{}", subscripition_address) })
+        .to_string()
+        .into();
 
-    // subscribe for updates 
-    let subscribe_stream = ton.queries.accounts.subscribe(
-        &json!({
-            "id": {
-                "eq": subscripition_address.to_string()
-            }
-        }).to_string(),
-        ACCOUNT_FIELDS).unwrap();
+    // subscribe for updates
+    let subscribe_stream = ton
+        .queries
+        .accounts
+        .subscribe(
+            &json!({
+                "id": {
+                    "eq": subscripition_address.to_string()
+                }
+            })
+            .to_string(),
+            ACCOUNT_FIELDS,
+        )
+        .unwrap();
 
     let _set_subscription_answer = ton.contracts.run(
         &wallet_address,
         WALLET_ABI,
         "setSubscriptionAccount",
         set_subscription_params,
-        Some(&keypair));
+        Some(&keypair),
+    );
 
     let subscr_id_str = hex::encode(&[0x11; 32]);
     let pubkey_str = keypair.public.clone();
 
-    let _subscribe_answer = ton.contracts.run(
-        &subscripition_address,
-        SUBSCRIBE_ABI,
-        "subscribe",
-        json!({
-            "subscriptionId" : format!("x{}", subscr_id_str),
-            "pubkey" : format!("x{}", pubkey_str),
-            "to": format!("x{}", piggy_bank_address),
-            "value" : 123,
-            "period" : 456
-        }).to_string().into(),
-        Some(&keypair)
-    ).unwrap();
+    let _subscribe_answer = ton
+        .contracts
+        .run(
+            &subscripition_address,
+            SUBSCRIBE_ABI,
+            "subscribe",
+            json!({
+                "subscriptionId" : format!("x{}", subscr_id_str),
+                "pubkey" : format!("x{}", pubkey_str),
+                "to": format!("x{}", piggy_bank_address),
+                "value" : 123,
+                "period" : 456
+            })
+            .to_string()
+            .into(),
+            Some(&keypair),
+        )
+        .unwrap();
 
     // check updates
-    let subscribe_result = subscribe_stream
-        .wait()
-        .next()
-        .unwrap()
-        .unwrap();
+    let subscribe_result = subscribe_stream.wait().next().unwrap().unwrap();
 
     assert_eq!(
         subscribe_result,
@@ -161,32 +206,43 @@ fn test_piggy() {
                     "workchain_id": 0
                 }
             }
-        }));
+        })
+    );
 
     let subscr_id_str = hex::encode(&[0x22; 32]);
-    let _subscribe_answer = ton.contracts.run(
-        &subscripition_address,
-        SUBSCRIBE_ABI,
-        "subscribe",
-        json!({
-            "subscriptionId" : format!("x{}", subscr_id_str),
-            "pubkey" : format!("x{}", pubkey_str),
-            "to": format!("x{}", piggy_bank_address),
-            "value" : 5000000000 as i64,
-            "period" : 86400
-        }).to_string().into(),
-        Some(&keypair)
-    ).unwrap();
+    let _subscribe_answer = ton
+        .contracts
+        .run(
+            &subscripition_address,
+            SUBSCRIBE_ABI,
+            "subscribe",
+            json!({
+                "subscriptionId" : format!("x{}", subscr_id_str),
+                "pubkey" : format!("x{}", pubkey_str),
+                "to": format!("x{}", piggy_bank_address),
+                "value" : 5000000000 as i64,
+                "period" : 86400
+            })
+            .to_string()
+            .into(),
+            Some(&keypair),
+        )
+        .unwrap();
 
-    let subscriptions = ton.contracts.run(
-        &subscripition_address,
-        SUBSCRIBE_ABI,
-        "getSubscription",
-        json!({
-            "subscriptionId" : format!("x{}", subscr_id_str),
-        }).to_string().into(),
-        Some(&keypair)
-    ).unwrap();
+    let subscriptions = ton
+        .contracts
+        .run(
+            &subscripition_address,
+            SUBSCRIBE_ABI,
+            "getSubscription",
+            json!({
+                "subscriptionId" : format!("x{}", subscr_id_str),
+            })
+            .to_string()
+            .into(),
+            Some(&keypair),
+        )
+        .unwrap();
 
     println!("getSubscription answer {}", subscriptions);
 }
@@ -217,7 +273,6 @@ const PIGGY_BANK_ABI: &str = r#"
         "outputs": []
     }]
 }"#;
-
 
 const SUBSCRIBE_CODE_BASE64: &str = r#"te6ccgECKAEABGkAAgE0AgEAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATL/AIn0BSHBAZN49KCbePQN8rSAIPSh8jPiAwEBwAQCASAGBQAp/+ABw8AEhcfABAdMHAfJr0x8B8AKAgHWGAcBAawIAgEgEgkCASALCgBdvBPJjSGMCAgEwAxYVrkwDrjGxo64X/9qJoa6ZAgIB6LflZZGZ2omhqGOeLZPaqQCAnUODAEJtJsMe0ANAfoxgQEAmAGLCtcmAdcY2NHXC//tRNDXTIEBAPQP8rJ1IXj0DvKx0wfRAXMhePQO8rHTH9EBciF49A7ysdN/0QFxIXj0DvKxMcjPlAK02GPaz4aAzgGVgwapDCGXgwagWMsHAegxzwsHAZWDBqkMIZeDBqBYywcB6DHPCwfLBxcBCbUQ68JADwH+MYEBAJgBiwrXJgHXGNgB1wv/AYECAJgBiwrXJgHXGNjRISDtRNDXTIEBAPQP8rJwIXj0DvKx1wv/E/kQ8uBmdCF49A7ysdMf0QFzIXj0DvKx0x/REqD4IyBYvJ91Inj0DvKx0wfRc7ry0GXfyMsfydB0WHj0FosQOHVYePQWcBABzO1E0NdMgQEA9A7ysgFyIXj0DvKxAXEhePQO8rEBJO1E0NdMgQEA9BfIzO1E0NQxzxbJ7VSCECT04VVwyMsHyx/PhoDOAdN/0ZWDBqkMIZeDBqBYywcB6DHPCwfJ0FgwAdcL/3BZcBEAgo4+/vkAU25kQmR5SW50Ae1HbxBvGPpCbxLIz4ZAygfL/8nQjhfIz4Ugz4oAQIEBAM9AzgH6AoBrz0DOydhw+wDYAgJwFBMAVbYbRXcMYEBAJgBiwrXJgHXGNjR7UTQINdKcbrcAXBtgQEA9BbIzM7J7VSABCbZr2EGgFQH+MYEBAJgBiwrXJgHXGNiBAQCYAYsK1yYB1xjYgQEAmAGLCtcmAdcY2NMA0wZYjhVxdwOSVSCc0wDTBgMgpgcFWayg6DHe0wDTBliOFXF3A5JVIJzTANMGAyCmBwVZrKDoMd7RXjAg10mBAQC68uBkIddJgQEAuvLgZCLXSYEBABYB5Lry4GQjwQHy0GQkwQHy0GRVMHBtePQWcQF49BYhyMt/ydAycgF49BYhyMsfydAycwF49Bb4I8jLH8nQdFh49BaLEAh1WHj0FiD5AALXC//tRNDXTIEBAPQXyMztRNDUMc8Wye1UyM+UAAa9hBrPhoDL/xcAaI4xjivIcs9Bcs9Acs9AcM8LP3DPCx9xz0BczzUBzzGkvpVxz0DPE5Vxz0HPEeLJ2HD7ANgCASAnGQEBMBoCA8/AHBsAGTQ1ygF+kD6QPoAbwSABbQg0wcB8muJ9AWAIPQK8qnXCwCOGSDHAvJt1SDHAPJtIfkBAe1E0NcL//kQ8qiXIMcCktQx3+KAdAQHAHgIBICQfAgEgISAACbwTyY0mAgJ1IyIACbSbDHsgAAm1EOvCIAICcCYlAAm2G0V3EAAJtmvYQbAABTbMIA=="#;
 const SUBSCRIBE_ABI: &str = r#"
@@ -261,4 +316,3 @@ const SUBSCRIBE_ABI: &str = r#"
         ]
     }]
 }"#;
-

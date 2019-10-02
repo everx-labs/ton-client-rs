@@ -12,11 +12,11 @@
  * limitations under the License.
  */
 
-use crate::interop::{InteropContext, Interop};
-use serde_json::Value;
-use crate::{TonResult, TonError};
+use crate::interop::{Interop, InteropContext};
+use crate::{TonError, TonResult};
 use futures::stream::Stream;
 use futures::{Async, Poll};
+use serde_json::Value;
 
 #[derive(Serialize)]
 pub(crate) struct ParamsOfQuery {
@@ -24,29 +24,29 @@ pub(crate) struct ParamsOfQuery {
     pub filter: String,
     pub result: String,
     pub order: Option<OrderBy>,
-    pub limit: Option<usize>
+    pub limit: Option<usize>,
 }
 
 #[derive(Serialize)]
 pub(crate) struct ParamsOfSubscribe {
     pub table: String,
     pub filter: String,
-    pub result: String
+    pub result: String,
 }
 
 #[derive(Deserialize)]
 pub(crate) struct ResultOfQuery {
-    pub result: Vec<Value>
+    pub result: Vec<Value>,
 }
 
 #[derive(Deserialize)]
 pub(crate) struct SingleResult {
-    pub result: Value
+    pub result: Value,
 }
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct SubscribeHandle {
-    pub handle: StreamHandle
+    pub handle: StreamHandle,
 }
 
 type StreamHandle = u32;
@@ -57,14 +57,14 @@ pub enum SortDirection {
     #[serde(rename = "ASC")]
     Ascending,
     #[serde(rename = "DESC")]
-    Descending
+    Descending,
 }
 
 /// Struct for specifying GraphQL answers sorting
 #[derive(Serialize, Deserialize)]
 pub struct OrderBy {
     pub path: String,
-    pub direction: SortDirection
+    pub direction: SortDirection,
 }
 
 struct SubscribeStream<'a> {
@@ -103,26 +103,36 @@ impl TonQueries {
 /// Struct for quering particular GraphQL collection
 pub struct TonQueriesCollection {
     context: InteropContext,
-    pub name: String
+    pub name: String,
 }
 
 impl TonQueriesCollection {
     pub(crate) fn new(context: InteropContext, name: &str) -> TonQueriesCollection {
         TonQueriesCollection {
             context,
-            name: name.to_string()
+            name: name.to_string(),
         }
     }
 
     /// Query request. Returns set of GraphQL objects satisfying conditions described by `filter`
-    pub fn query(&self, filter: &str, result: &str, order: Option<OrderBy>, limit: Option<usize>) -> TonResult<Vec<Value>> {
-        let result: ResultOfQuery = Interop::json_request(self.context, "queries.query", ParamsOfQuery {
-            table: self.name.to_owned(),
-            filter: filter.to_owned(),
-            result: result.to_owned(),
-            order,
-            limit
-        })?;
+    pub fn query(
+        &self,
+        filter: &str,
+        result: &str,
+        order: Option<OrderBy>,
+        limit: Option<usize>,
+    ) -> TonResult<Vec<Value>> {
+        let result: ResultOfQuery = Interop::json_request(
+            self.context,
+            "queries.query",
+            ParamsOfQuery {
+                table: self.name.to_owned(),
+                filter: filter.to_owned(),
+                result: result.to_owned(),
+                order,
+                limit,
+            },
+        )?;
         Ok(result.result)
     }
 
@@ -130,28 +140,42 @@ impl TonQueriesCollection {
     /// If such an object already exists it is returned immediately.
     /// In case of several objects satisfying provided conditions exists first founded object returned.
     pub fn wait_for(&self, filter: &str, result: &str) -> TonResult<Value> {
-        let result: SingleResult = Interop::json_request(self.context, "queries.wait.for", ParamsOfSubscribe {
-            table: self.name.to_owned(),
-            filter: filter.to_owned(),
-            result: result.to_owned()
-        })?;
+        let result: SingleResult = Interop::json_request(
+            self.context,
+            "queries.wait.for",
+            ParamsOfSubscribe {
+                table: self.name.to_owned(),
+                filter: filter.to_owned(),
+                result: result.to_owned(),
+            },
+        )?;
         Ok(result.result)
     }
 
     /// Subscribe for object updates. Returns `Stream` containing objects states
-    pub fn subscribe<'a>(&'a self, filter: &str, result: &str) -> TonResult<Box<dyn Stream<Item=Value, Error=TonError> + 'a>> {
-        let result: SubscribeHandle = Interop::json_request(self.context, "queries.subscribe", ParamsOfSubscribe {
-            table: self.name.to_owned(),
-            filter: filter.to_owned(),
-            result: result.to_owned()
-        })?;
-        Ok(Box::new(SubscribeStream { collection: self, handle: result.handle }))
+    pub fn subscribe<'a>(
+        &'a self,
+        filter: &str,
+        result: &str,
+    ) -> TonResult<Box<dyn Stream<Item = Value, Error = TonError> + 'a>> {
+        let result: SubscribeHandle = Interop::json_request(
+            self.context,
+            "queries.subscribe",
+            ParamsOfSubscribe {
+                table: self.name.to_owned(),
+                filter: filter.to_owned(),
+                result: result.to_owned(),
+            },
+        )?;
+        Ok(Box::new(SubscribeStream {
+            collection: self,
+            handle: result.handle,
+        }))
     }
 
     fn get_next(&self, handle: StreamHandle) -> TonResult<Value> {
-        let result: SingleResult = Interop::json_request(self.context, "queries.get.next", SubscribeHandle {
-            handle
-        })?;
+        let result: SingleResult =
+            Interop::json_request(self.context, "queries.get.next", SubscribeHandle { handle })?;
         Ok(result.result)
     }
 }

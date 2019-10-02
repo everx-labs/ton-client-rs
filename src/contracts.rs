@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-use crate::{Ed25519KeyPair, TonResult, TonError, TonAddress};
+use crate::interop::{Interop, InteropContext};
+use crate::{Ed25519KeyPair, TonAddress, TonError, TonResult};
 use serde_json::Value;
-use crate::interop::{InteropContext, Interop};
 
 #[derive(Serialize)]
 #[allow(non_snake_case)]
@@ -65,12 +65,12 @@ pub(crate) struct ParamsOfLocalRun {
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
 pub struct ResultOfRun {
-    pub output: Value
+    pub output: Value,
 }
 
 /// Parameters to be passed into contract function
 pub enum RunParameters {
-     Json(String),
+    Json(String),
     // Values(...)
 }
 
@@ -91,11 +91,7 @@ impl TonContracts {
     }
 
     /// Get address for contract deploying
-    pub fn get_deploy_address(
-        &self,
-        code: &[u8],
-        keys: &Ed25519KeyPair,
-    ) -> TonResult<TonAddress> {
+    pub fn get_deploy_address(&self, code: &[u8], keys: &Ed25519KeyPair) -> TonResult<TonAddress> {
         let result: TonAddress = Interop::json_request(
             self.context,
             "contracts.deploy.address",
@@ -103,7 +99,8 @@ impl TonContracts {
                 abi: Value::Null,
                 imageBase64: base64::encode(code),
                 keyPair: keys.clone(),
-            })?;
+            },
+        )?;
         Ok(result)
     }
 
@@ -115,21 +112,24 @@ impl TonContracts {
         constructor_params: RunParameters,
         keys: &Ed25519KeyPair,
     ) -> TonResult<TonAddress> {
-        let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("deploy"))?;
+        let abi = serde_json::from_str(abi).map_err(|_| TonError::invalid_params("deploy"))?;
 
         let str_params = match &constructor_params {
-            RunParameters::Json(string) => string
+            RunParameters::Json(string) => string,
         };
-        let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("deploy"))?;
+        let params_value =
+            serde_json::from_str(str_params).map_err(|_| TonError::invalid_params("deploy"))?;
 
-        let result: ResultOfDeploy = Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
-            abi,
-            constructorParams: params_value,
-            imageBase64: base64::encode(code),
-            keyPair: keys.clone(),
-        })?;
+        let result: ResultOfDeploy = Interop::json_request(
+            self.context,
+            "contracts.deploy",
+            ParamsOfDeploy {
+                abi,
+                constructorParams: params_value,
+                imageBase64: base64::encode(code),
+                keyPair: keys.clone(),
+            },
+        )?;
         Ok(result.address)
     }
 
@@ -142,22 +142,29 @@ impl TonContracts {
         input: RunParameters,
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
-        let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("run"))?;
-        
-        let str_params = match &input {
-            RunParameters::Json(string) => string
-        };
-        let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("run"))?;
+        let abi = serde_json::from_str(abi).map_err(|_| TonError::invalid_params("run"))?;
 
-        let result: ResultOfRun = Interop::json_request(self.context, "contracts.run", ParamsOfRun {
-            address: address.clone(),
-            abi,
-            functionName: function_name.to_string(),
-            input: params_value,
-            keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
-        })?;
+        let str_params = match &input {
+            RunParameters::Json(string) => string,
+        };
+        let params_value =
+            serde_json::from_str(str_params).map_err(|_| TonError::invalid_params("run"))?;
+
+        let result: ResultOfRun = Interop::json_request(
+            self.context,
+            "contracts.run",
+            ParamsOfRun {
+                address: address.clone(),
+                abi,
+                functionName: function_name.to_string(),
+                input: params_value,
+                keyPair: if let Some(keys) = keys {
+                    Some(keys.clone())
+                } else {
+                    None
+                },
+            },
+        )?;
         Ok(result.output)
     }
 
@@ -171,31 +178,37 @@ impl TonContracts {
         input: RunParameters,
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
-        let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("run_local"))?;
-        
+        let abi = serde_json::from_str(abi).map_err(|_| TonError::invalid_params("run_local"))?;
+
         let str_params = match &input {
-            RunParameters::Json(string) => string
+            RunParameters::Json(string) => string,
         };
-        let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("run_local"))?;
+        let params_value =
+            serde_json::from_str(str_params).map_err(|_| TonError::invalid_params("run_local"))?;
 
         let account = match account {
-            Some(acc_str) => {
-                Some(serde_json::from_str(acc_str)
-                    .map_err(|_|TonError::invalid_params("run_local"))?)
-            },
-            None => None
+            Some(acc_str) => Some(
+                serde_json::from_str(acc_str).map_err(|_| TonError::invalid_params("run_local"))?,
+            ),
+            None => None,
         };
 
-        let result: ResultOfRun = Interop::json_request(self.context, "contracts.run.local", ParamsOfLocalRun {
-            address: address.clone(),
-            account,
-            abi,
-            functionName: function_name.to_string(),
-            input: params_value,
-            keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
-        })?;
+        let result: ResultOfRun = Interop::json_request(
+            self.context,
+            "contracts.run.local",
+            ParamsOfLocalRun {
+                address: address.clone(),
+                account,
+                abi,
+                functionName: function_name.to_string(),
+                input: params_value,
+                keyPair: if let Some(keys) = keys {
+                    Some(keys.clone())
+                } else {
+                    None
+                },
+            },
+        )?;
         Ok(result.output)
     }
 }

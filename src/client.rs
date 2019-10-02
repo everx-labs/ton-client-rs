@@ -13,22 +13,22 @@
  */
 
 use crate::interop::Interop;
-use crate::{TonCrypto, TonContracts, TonQueries, TonResult};
+use crate::{TonContracts, TonCrypto, TonQueries, TonResult};
 
 /// `TonClient` configuration. Contains optional fields with configuration parameters.
-/// 
+///
 /// `default_workchain` sets target workchain for deploying and running contracts
-/// 
+///
 /// `base_url` is used for deriving `requests_url`, `queries_url` and `subscriptions_url`
 ///  values with default suffixes if ones are not set.
-/// 
+///
 /// `requests_url` points address for sending requests to node via http REST API
-/// 
+///
 /// `queries_url` points address of GraphQL server for quering blockchain data
-/// 
+///
 /// `subscriptions_url` points address of GraphQL server for subscripitions on blockchain data updates
 #[derive(Default, Serialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct TonClientConfig {
     pub default_workchain: Option<i32>,
     pub base_url: Option<String>,
@@ -42,8 +42,7 @@ pub struct TonClient {
     context: u32,
     pub crypto: TonCrypto,
     pub contracts: TonContracts,
-    pub queries: TonQueries
-
+    pub queries: TonQueries,
 }
 
 impl TonClient {
@@ -54,7 +53,7 @@ impl TonClient {
             context,
             crypto: TonCrypto::new(context),
             contracts: TonContracts::new(context),
-            queries: TonQueries::new(context)
+            queries: TonQueries::new(context),
         };
         client.setup(config)?;
         Ok(client)
@@ -68,7 +67,7 @@ impl TonClient {
             requests_url: None,
             queries_url: None,
             subscriptions_url: None,
-            default_workchain: Some(0)
+            default_workchain: Some(0),
         })
     }
 

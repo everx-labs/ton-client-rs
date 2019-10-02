@@ -12,10 +12,10 @@
  * limitations under the License.
  */
 
-use crate::interop::{InteropContext, Interop};
+use crate::interop::{Interop, InteropContext};
 use crate::TonResult;
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
 use serde::de::Visitor;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Clone)]
 struct HDPublic(pub [u8; 33]);
@@ -39,7 +39,10 @@ pub struct Ed25519KeyPair {
 
 impl Ed25519KeyPair {
     pub fn zero() -> Ed25519KeyPair {
-        Ed25519KeyPair { public: Ed25519Public([0u8; 32]), secret: Ed25519Secret([0u8; 32]) }
+        Ed25519KeyPair {
+            public: Ed25519Public([0u8; 32]),
+            secret: Ed25519Secret([0u8; 32]),
+        }
     }
 
     pub fn to_bytes(&self) -> [u8; 64] {
@@ -56,7 +59,10 @@ impl Ed25519KeyPair {
         secret.copy_from_slice(&bytes[..32]);
         public.copy_from_slice(&bytes[32..]);
 
-        Ed25519KeyPair { public: Ed25519Public(public), secret: Ed25519Secret(secret) }
+        Ed25519KeyPair {
+            public: Ed25519Public(public),
+            secret: Ed25519Secret(secret),
+        }
     }
 }
 
@@ -76,7 +82,10 @@ struct NaclSignKeyPair {
 #[allow(dead_code)]
 impl NaclSignKeyPair {
     pub fn zero() -> NaclSignKeyPair {
-        NaclSignKeyPair { public: Ed25519Public([0u8; 32]), secret: NaclSignSecret([0u8; 64]) }
+        NaclSignKeyPair {
+            public: Ed25519Public([0u8; 32]),
+            secret: NaclSignSecret([0u8; 64]),
+        }
     }
 }
 
@@ -121,29 +130,37 @@ impl Default for Ed25519Secret {
 }
 
 impl Serialize for HDPublic {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
-        S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_str(&hex::encode(self.0.as_ref()))
     }
 }
 
 impl Serialize for NaclSignSecret {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
-        S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_str(&hex::encode(self.0.as_ref()))
     }
 }
 
 impl Serialize for Ed25519Public {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
-        S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_str(&hex::encode(&self.0.as_ref()))
     }
 }
 
 impl Serialize for Ed25519Secret {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
-        S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_str(&hex::encode(&self.0.as_ref()))
     }
 }
@@ -157,7 +174,10 @@ impl<'de> Visitor<'de> for KeysVisitor {
         formatter.write_str("32 bytes written into string like a hex values without spaces")
     }
 
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: serde::de::Error {
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
         let mut result = [0u8; 32];
         let vec = hex::decode(v)
             .map_err(|err| serde::de::Error::custom(format!("error decode hex: {}", err)))?;
@@ -173,7 +193,7 @@ impl<'de> Visitor<'de> for KeysVisitor {
 impl<'de> Deserialize<'de> for Ed25519Public {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>, 
+        D: Deserializer<'de>,
     {
         Ok(Ed25519Public(deserializer.deserialize_str(KeysVisitor)?))
     }
@@ -182,7 +202,7 @@ impl<'de> Deserialize<'de> for Ed25519Public {
 impl<'de> Deserialize<'de> for Ed25519Secret {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>, 
+        D: Deserializer<'de>,
     {
         Ok(Ed25519Secret(deserializer.deserialize_str(KeysVisitor)?))
     }

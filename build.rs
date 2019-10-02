@@ -18,11 +18,11 @@ extern crate flate2;
 use std::env;
 use std::fs::File;
 use std::io::BufWriter;
-use std::path::{Path, PathBuf};
 use std::io::Write;
+use std::path::{Path, PathBuf};
 
-use flate2::read::GzDecoder;
 use curl::easy::Easy;
+use flate2::read::GzDecoder;
 
 const BINARIES_URL: &str = "http://sdkbinaries.tonlabs.io";
 
@@ -74,15 +74,27 @@ fn install_binaries() {
     vec[2] = &patch;
     let version: String = vec.join("_");
 
-    let files = if cfg!(target_os="windows") {
+    let files = if cfg!(target_os = "windows") {
         vec![
-            (format!("tonclient_{}_win32_dll.gz", version), "ton_client.dll"),
-            (format!("tonclient_{}_win32_lib.gz", version), "ton_client.lib")
+            (
+                format!("tonclient_{}_win32_dll.gz", version),
+                "ton_client.dll",
+            ),
+            (
+                format!("tonclient_{}_win32_lib.gz", version),
+                "ton_client.lib",
+            ),
         ]
-    } else if cfg!(target_os="linux") {
-        vec![(format!("tonclient_{}_linux.gz", version), "libton_client.so")]
-    } else if cfg!(target_os="macos") {
-        vec![(format!("tonclient_{}_darwin.gz", version), "libton_client.dylib")]
+    } else if cfg!(target_os = "linux") {
+        vec![(
+            format!("tonclient_{}_linux.gz", version),
+            "libton_client.so",
+        )]
+    } else if cfg!(target_os = "macos") {
+        vec![(
+            format!("tonclient_{}_darwin.gz", version),
+            "libton_client.dylib",
+        )]
     } else {
         panic!("Unknown target OS");
     };

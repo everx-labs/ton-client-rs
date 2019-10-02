@@ -12,9 +12,9 @@
  * limitations under the License.
  */
 
-use crate::{TonResult, TonError};
-use serde::Serialize;
+use crate::{TonError, TonResult};
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 #[link(name = "ton_client")]
 extern "C" {
@@ -25,13 +25,9 @@ extern "C" {
         method_name: InteropString,
         params_json: InteropString,
     ) -> *const InteropJsonResponseHandle;
-    fn tc_destroy_json_response(
-        response: *const InteropJsonResponseHandle
-    );
+    fn tc_destroy_json_response(response: *const InteropJsonResponseHandle);
 
-    fn tc_read_json_response(
-        response: *const InteropJsonResponseHandle
-    ) -> InteropJsonResponse;
+    fn tc_read_json_response(response: *const InteropJsonResponseHandle) -> InteropJsonResponse;
 }
 
 // Types
@@ -44,7 +40,6 @@ pub(crate) struct InteropString {
     pub len: u32,
 }
 
-
 #[repr(C)]
 pub(crate) struct InteropJsonResponse {
     pub result_json: InteropString,
@@ -53,7 +48,7 @@ pub(crate) struct InteropJsonResponse {
 
 #[repr(C)]
 struct InteropJsonResponseHandle {
-    dummy: u32
+    dummy: u32,
 }
 
 pub(crate) struct JsonResponse {
@@ -77,7 +72,6 @@ impl InteropString {
             String::from_utf8(utf8.to_vec()).unwrap()
         }
     }
-
 }
 
 impl InteropJsonResponse {
@@ -89,36 +83,36 @@ impl InteropJsonResponse {
     }
 }
 
-
-
 pub(crate) struct Interop {}
 
 impl Interop {
     pub fn create_context() -> InteropContext {
-        unsafe {
-            tc_create_context()
-        }
+        unsafe { tc_create_context() }
     }
 
     pub fn destroy_context(context: InteropContext) {
-        unsafe {
-            tc_destroy_context(context)
-        }
+        unsafe { tc_destroy_context(context) }
     }
 
-    fn base_json_request<R: DeserializeOwned>(context: InteropContext, method_name: &str, params_json: String) -> TonResult<R> {
-        let response = Self::interop_json_request(
-            context,
-            &method_name.to_string(),
-            &params_json);
+    fn base_json_request<R: DeserializeOwned>(
+        context: InteropContext,
+        method_name: &str,
+        params_json: String,
+    ) -> TonResult<R> {
+        let response = Self::interop_json_request(context, &method_name.to_string(), &params_json);
         if response.error_json.is_empty() {
             let result: Result<R, serde_json::Error> = serde_json::from_str(&response.result_json);
-            result.map_err(|_| TonError::invalid_response_result(method_name, &response.result_json))
+            result
+                .map_err(|_| TonError::invalid_response_result(method_name, &response.result_json))
         } else {
-            let result: Result<TonError, serde_json::Error> = serde_json::from_str(&response.error_json);
+            let result: Result<TonError, serde_json::Error> =
+                serde_json::from_str(&response.error_json);
             match result {
                 Ok(err) => Err(err),
-                Err(_) => Err(TonError::invalid_response_error(method_name, &response.error_json))
+                Err(_) => Err(TonError::invalid_response_error(
+                    method_name,
+                    &response.error_json,
+                )),
             }
         }
     }
@@ -126,10 +120,10 @@ impl Interop {
     pub fn json_request<P: Serialize, R: DeserializeOwned>(
         context: InteropContext,
         method_name: &str,
-        params: P
+        params: P,
     ) -> TonResult<R> {
-        let params_json = serde_json::to_string(&params)
-            .map_err(|_|TonError::invalid_params(method_name))?;
+        let params_json =
+            serde_json::to_string(&params).map_err(|_| TonError::invalid_params(method_name))?;
         Self::base_json_request(context, method_name, params_json)
     }
 
@@ -143,13 +137,13 @@ impl Interop {
     fn interop_json_request(
         context: InteropContext,
         method_name: &String,
-        params_json: &String
+        params_json: &String,
     ) -> JsonResponse {
         unsafe {
             let response_ptr = tc_json_request(
                 context,
                 InteropString::from(method_name),
-                InteropString::from(params_json)
+                InteropString::from(params_json),
             );
             let interop_response = tc_read_json_response(response_ptr);
             let response = interop_response.to_response();
@@ -157,5 +151,4 @@ impl Interop {
             response
         }
     }
-
 }

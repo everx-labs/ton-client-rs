@@ -18,9 +18,8 @@ extern crate serde_derive;
 #[cfg(test)]
 #[macro_use]
 extern crate serde_json;
-extern crate serde;
 extern crate base64;
-
+extern crate serde;
 
 #[cfg(test)]
 mod tests;
@@ -49,10 +48,7 @@ pub struct TonError {
     message: String,
 }
 
-
-
 impl TonError {
-
     fn sdk(code: u32, message: &str) -> Self {
         Self {
             source: "sdk".to_string(),
@@ -66,13 +62,24 @@ impl TonError {
     }
 
     pub fn invalid_response_result(method_name: &str, result_json: &String) -> Self {
-        Self::sdk(2, &format!("Can not deserialize result for {}\nresult JSON: {}", method_name, result_json))
+        Self::sdk(
+            2,
+            &format!(
+                "Can not deserialize result for {}\nresult JSON: {}",
+                method_name, result_json
+            ),
+        )
     }
 
     pub fn invalid_response_error(method_name: &str, error_json: &String) -> Self {
-        Self::sdk(3, &format!("Can not deserialize error for {}\nerror JSON: {}", method_name, error_json))
+        Self::sdk(
+            3,
+            &format!(
+                "Can not deserialize error for {}\nerror JSON: {}",
+                method_name, error_json
+            ),
+        )
     }
 }
 
 pub type TonResult<R> = Result<R, TonError>;
-
