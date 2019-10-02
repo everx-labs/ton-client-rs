@@ -62,6 +62,20 @@ pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress) {
            "amount": 10_000_000_000u64
         }).to_string().into(),
        None).unwrap();
+
+	// wait for grams recieving
+	let wait_result = ton.queries.accounts.wait_for(&json!({
+			"id": { "eq": account.get_account_hex_string() },
+			"storage": {
+				"balance": {
+					"Grams": { "gt": "0" }
+				}
+			}
+		}).to_string(),
+		"id storage {balance {Grams}}"
+	).unwrap();
+
+	println!("wait result {}", wait_result);
 }
 
 const GIVER_ADDRESS: &str = "ce709b5bfca589eb621b5a5786d0b562761144ac48f59e0b0d35ad0973bcdb86";
