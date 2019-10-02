@@ -168,3 +168,18 @@ impl std::fmt::Display for TonAddress {
     }
 }
 
+#[test]
+fn test_address_parsing() {
+    let short = "fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260";
+    let full_std = "-1:fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260";
+    let base64 = "kf/8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15+KsQHFLbKSMiYIny";
+    let base64_url = "kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny";
+
+    let full_address = TonAddress::StdFull(-1, <[u8;32]>::try_from(&hex::decode(short).unwrap()[..]).unwrap());
+    let short_address = TonAddress::StdShort(<[u8;32]>::try_from(&hex::decode(short).unwrap()[..]).unwrap());
+
+    assert_eq!(short_address, TonAddress::from_str(short).expect("Couldn't parse short address"));
+    assert_eq!(full_address, TonAddress::from_str(full_std).expect("Couldn't parse full_std address"));
+    assert_eq!(full_address, TonAddress::from_str(base64).expect("Couldn't parse base64 address"));
+    assert_eq!(full_address, TonAddress::from_str(base64_url).expect("Couldn't parse base64_url address"));
+}
