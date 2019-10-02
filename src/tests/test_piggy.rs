@@ -34,10 +34,22 @@ fn test_piggy() {
     let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
+    let prepared_address = ton.contracts.get_deploy_address(
+        &base64::decode(WALLET_CODE_BASE64).unwrap(),
+        &keypair).unwrap();
+
+    super::get_grams_from_giver(&ton, &prepared_address);
+
     let wallet_address = ton.contracts.deploy(
         WALLET_ABI,
         &base64::decode(WALLET_CODE_BASE64).unwrap(),
         json!({}).to_string().into(), &keypair).unwrap();
+
+    let prepared_address = ton.contracts.get_deploy_address(
+        &base64::decode(PIGGY_BANK_CODE_BASE64).unwrap(),
+        &keypair).unwrap();
+
+    super::get_grams_from_giver(&ton, &prepared_address);
 
     let piggy_bank_address = ton.contracts.deploy(
         PIGGY_BANK_ABI,
@@ -48,6 +60,8 @@ fn test_piggy() {
         }).to_string().into(),
         &keypair,
     ).unwrap();
+
+    println!("address {}", piggy_bank_address);
 
     // check queries on real data
     let query_result = ton.queries.accounts.query(
@@ -101,6 +115,12 @@ fn test_piggy() {
         json!({}).to_string().into(), None).unwrap();
 
     println!("getGoal answer {}", get_goal_answer);
+
+    let prepared_address = ton.contracts.get_deploy_address(
+        &base64::decode(SUBSCRIBE_CODE_BASE64).unwrap(),
+        &keypair).unwrap();
+
+    super::get_grams_from_giver(&ton, &prepared_address);
 
     let subscription_constructor_params = json!({ "wallet" : format!("x{}", wallet_address)}).to_string().into();
     let subscripition_address = ton.contracts.deploy(
