@@ -12,7 +12,8 @@
  * limitations under the License.
  */
 
-use crate::{Ed25519KeyPair, TonResult, TonError, TonAddress};
+use crate::{Ed25519KeyPair, TonAddress};
+use crate::error::*;
 use serde_json::Value;
 use crate::interop::{InteropContext, Interop};
 
@@ -116,13 +117,13 @@ impl TonContracts {
         keys: &Ed25519KeyPair,
     ) -> TonResult<TonAddress> {
         let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("deploy"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
         let str_params = match &constructor_params {
             RunParameters::Json(string) => string
         };
         let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("deploy"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
         let result: ResultOfDeploy = Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
             abi,
@@ -143,13 +144,13 @@ impl TonContracts {
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("run"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
         
         let str_params = match &input {
             RunParameters::Json(string) => string
         };
         let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("run"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
         let result: ResultOfRun = Interop::json_request(self.context, "contracts.run", ParamsOfRun {
             address: address.clone(),
@@ -172,18 +173,18 @@ impl TonContracts {
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("run_local"))?;
+           .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
         
         let str_params = match &input {
             RunParameters::Json(string) => string
         };
         let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("run_local"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
         let account = match account {
             Some(acc_str) => {
                 Some(serde_json::from_str(acc_str)
-                    .map_err(|_|TonError::invalid_params("run_local"))?)
+                   .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))?)
             },
             None => None
         };

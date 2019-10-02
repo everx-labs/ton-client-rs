@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-use crate::{TonResult, TonError};
+use crate::error::*;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -112,13 +112,15 @@ impl Interop {
             &method_name.to_string(),
             &params_json);
         if response.error_json.is_empty() {
-            let result: Result<R, serde_json::Error> = serde_json::from_str(&response.result_json);
-            result.map_err(|_| TonError::invalid_response_result(method_name, &response.result_json))
+            serde_json::from_str(&response.result_json)
+                .map_err(|err| TonError::from(TonErrorKind::InvalidFunctionResult(
+                    method_name.to_owned(), response.result_json, err.to_string())))
         } else {
-            let result: Result<TonError, serde_json::Error> = serde_json::from_str(&response.error_json);
+            let result: Result<InnerSdkError, serde_json::Error> = serde_json::from_str(&response.error_json);
             match result {
-                Ok(err) => Err(err),
-                Err(_) => Err(TonError::invalid_response_error(method_name, &response.error_json))
+                Ok(err) => Err(TonErrorKind::InnerSdkError(err).into()),
+                Err(err) => Err(TonErrorKind::InvalidFunctionError(
+                    method_name.to_owned(), response.error_json, err.to_string()).into())
             }
         }
     }
@@ -129,7 +131,8 @@ impl Interop {
         params: P
     ) -> TonResult<R> {
         let params_json = serde_json::to_string(&params)
-            .map_err(|_|TonError::invalid_params(method_name))?;
+            .map_err(|err| TonError::from(TonErrorKind::InvalidFunctionParams(
+                method_name.to_owned(), err.to_string())))?;
         Self::base_json_request(context, method_name, params_json)
     }
 
