@@ -78,6 +78,19 @@ pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress) {
 	println!("wait result {}", wait_result);
 }
 
+#[test]
+fn test_decode_input() {
+    let body = "te6ccoEBAgEAcwARcwEbACfvUIcBgJTr3AOCAGABAMDr2GubWXYR6wuk6WFn4btjW3w+DbidhSrKArHbqCaunLGN9LwAbQFT9kyOpN6DR6DJbuKkvC94KwJgan7xeTUHS89H/vKbWZbzZEHu4euhqvQE2I9aW+PNdn2BKZJXlA4=";
+	let body = base64::decode(body).unwrap();
+
+	let ton = TonClient::default().unwrap();
+
+    let result = ton.contracts.decode_input_message_body(WALLET_ABI, &body).expect("Couldn't parse body");
+
+	assert_eq!(result.function, "createLimit");
+	assert_eq!(result.output, json!({ "type": "0x1", "value": "0x3b9aca00", "meta": "x01"}));
+}
+
 const GIVER_ADDRESS: &str = "ce709b5bfca589eb621b5a5786d0b562761144ac48f59e0b0d35ad0973bcdb86";
 const GIVER_ABI: &str = r#"
 {
