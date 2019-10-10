@@ -14,6 +14,8 @@
 
 use serde::{Serialize, Serializer, Deserialize, Deserializer};
 use serde::de::Visitor;
+use std::convert::TryFrom;
+use crate::error::*;
 
 /// Enum representing possible TON blockchain internal account addresses.
 /// For now only `StdShort` address is supported by core library so all variants are 
@@ -30,9 +32,7 @@ pub enum TonAddress {
 impl Serialize for TonAddress {
     fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
         S: Serializer {
-        //serializer.serialize_str(&format!("{}", self))
-        // for now only StdShort address is supported
-        serializer.serialize_str(&self.get_account_hex_string())
+        serializer.serialize_str(&format!("{}", self))
     }
 }
 
@@ -46,16 +46,8 @@ impl<'de> Visitor<'de> for AddressVisitor {
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E> where E: serde::de::Error {
-        // for now only StdShort address is supported
-        let mut result = [0u8; 32];
-        let vec = hex::decode(v)
-            .map_err(|err| serde::de::Error::custom(format!("error decode hex: {}", err)))?;
-        if vec.len() != 32 {
-            return Err(serde::de::Error::custom(format!("Wrong data length")));
-        }
-
-        result.copy_from_slice(&vec);
-        Ok(TonAddress::StdShort(result))
+        TonAddress::from_str(v)
+            .map_err(|err| serde::de::Error::custom(format!("error decode address: {}", err)))
     }
 }
 
@@ -82,6 +74,62 @@ impl TonAddress {
                 hex::encode(a),
             TonAddress::AnycastVar(_, _, _, a) =>
                 hex::encode(a),
+        }
+    }
+
+    fn decode_std_short(data: &str) -> TonResult<Self> {
+        let vec = hex::decode(data)?;
+
+        Ok(TonAddress::StdShort(<[u8; 32]>::try_from(&vec[..])?))
+    }
+    
+    fn decode_std_base64(data: &str) -> TonResult<Self> {
+        // conversion from base64url
+        let data = data.replace('_', "/").replace('-', "+");
+
+        let vec = base64::decode(&data)?;
+
+        // check CRC and address tag
+
+        let mut orig_crc = [0u8; 2];
+        orig_crc.copy_from_slice(&vec[34..36]);
+
+        if crc16::State::<crc16::XMODEM>::calculate(&vec[..34]) != u16::from_be_bytes(orig_crc) {
+            return Err(TonError::from(TonErrorKind::InvalidData(
+                format!("base64 address invalid CRC \"{}\"", data))));
+        };
+
+        if vec[0] & 0x3f != 0x11 {
+            return Err(TonError::from(TonErrorKind::InvalidData(
+                format!("base64 address invalid tag \"{}\"", data))));
+        }
+
+        Ok(TonAddress::StdFull(
+            i8::from_be_bytes(<[u8; 1]>::try_from(&vec[1..2])?),
+            <[u8; 32]>::try_from(&vec[2..34])?))
+    }
+
+    fn decode_std_hex(data: &str) -> TonResult<Self> {
+        let vec: Vec<&str> = data.split(':').collect();
+
+        if vec.len() != 2 {
+            return Err(TonError::from(TonErrorKind::InvalidData(
+                format!("Malformed std hex address. No \":\" delimiter. \"{}\"", data))));
+        }
+
+        Ok(TonAddress::StdFull(
+            i8::from_str_radix(vec[0], 10)?,
+            <[u8; 32]>::try_from(&hex::decode(vec[1])?[..])?))
+    }
+    
+    /// Retrieves account address from `str` in Telegram lite-client format
+    pub fn from_str(data: &str) -> TonResult<Self> {
+        if data.len() == 64 {
+            Self::decode_std_short(data)
+        } else if data.len() == 48 {
+            Self::decode_std_base64(data)
+        } else {
+            Self::decode_std_hex(data)
         }
     }
 }
@@ -120,3 +168,18 @@ impl std::fmt::Display for TonAddress {
     }
 }
 
+#[test]
+fn test_address_parsing() {
+    let short = "fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260";
+    let full_std = "-1:fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260";
+    let base64 = "kf/8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15+KsQHFLbKSMiYIny";
+    let base64_url = "kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny";
+
+    let full_address = TonAddress::StdFull(-1, <[u8;32]>::try_from(&hex::decode(short).unwrap()[..]).unwrap());
+    let short_address = TonAddress::StdShort(<[u8;32]>::try_from(&hex::decode(short).unwrap()[..]).unwrap());
+
+    assert_eq!(short_address, TonAddress::from_str(short).expect("Couldn't parse short address"));
+    assert_eq!(full_address, TonAddress::from_str(full_std).expect("Couldn't parse full_std address"));
+    assert_eq!(full_address, TonAddress::from_str(base64).expect("Couldn't parse base64 address"));
+    assert_eq!(full_address, TonAddress::from_str(base64_url).expect("Couldn't parse base64_url address"));
+}

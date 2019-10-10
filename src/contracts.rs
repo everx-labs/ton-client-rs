@@ -12,7 +12,8 @@
  * limitations under the License.
  */
 
-use crate::{Ed25519KeyPair, TonResult, TonError, TonAddress};
+use crate::{Ed25519KeyPair, TonAddress};
+use crate::error::*;
 use serde_json::Value;
 use crate::interop::{InteropContext, Interop};
 
@@ -68,6 +69,20 @@ pub struct ResultOfRun {
     pub output: Value
 }
 
+#[derive(Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct ParamsOfDecodeMessageBody {
+    pub abi: serde_json::Value,
+    pub bodyBase64: String,
+}
+
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize)]
+pub struct ResultOfDecodeMessageBody {
+    pub function: String,
+    pub output: serde_json::Value
+}
+
 /// Parameters to be passed into contract function
 pub enum RunParameters {
      Json(String),
@@ -116,13 +131,13 @@ impl TonContracts {
         keys: &Ed25519KeyPair,
     ) -> TonResult<TonAddress> {
         let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("deploy"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
         let str_params = match &constructor_params {
             RunParameters::Json(string) => string
         };
         let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("deploy"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
         let result: ResultOfDeploy = Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
             abi,
@@ -143,13 +158,13 @@ impl TonContracts {
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("run"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
         
         let str_params = match &input {
             RunParameters::Json(string) => string
         };
         let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("run"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
         let result: ResultOfRun = Interop::json_request(self.context, "contracts.run", ParamsOfRun {
             address: address.clone(),
@@ -172,18 +187,18 @@ impl TonContracts {
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
-            .map_err(|_|TonError::invalid_params("run_local"))?;
+           .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
         
         let str_params = match &input {
             RunParameters::Json(string) => string
         };
         let params_value = serde_json::from_str(str_params)
-            .map_err(|_|TonError::invalid_params("run_local"))?;
+            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
         let account = match account {
             Some(acc_str) => {
                 Some(serde_json::from_str(acc_str)
-                    .map_err(|_|TonError::invalid_params("run_local"))?)
+                   .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))?)
             },
             None => None
         };
@@ -197,5 +212,41 @@ impl TonContracts {
             keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
         })?;
         Ok(result.output)
+    }
+
+    /// Decodes external inbound message body with encoded contract call parameters
+    pub fn decode_input_message_body(
+        &self,
+        abi: &str,
+        body: &[u8]
+    ) -> TonResult<ResultOfDecodeMessageBody> {
+        let abi = serde_json::from_str(abi)
+           .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
+
+        Interop::json_request(
+            self.context,
+            "contracts.run.unknown.input",
+            ParamsOfDecodeMessageBody {
+                abi,
+                bodyBase64: base64::encode(body)
+        })
+    }
+
+    /// Decode external outbound message body with encoded contract function response or event
+    pub fn decode_output_message_body(
+        &self,
+        abi: &str,
+        body: &[u8]
+    ) -> TonResult<ResultOfDecodeMessageBody> {
+        let abi = serde_json::from_str(abi)
+           .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
+
+        Interop::json_request(
+            self.context,
+            "contracts.run.unknown.output",
+            ParamsOfDecodeMessageBody {
+                abi,
+                bodyBase64: base64::encode(body)
+        })
     }
 }

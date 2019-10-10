@@ -12,6 +12,8 @@
  * limitations under the License.
  */
 
+#![recursion_limit="128"] // needed for error_chain
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -20,6 +22,9 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate serde;
 extern crate base64;
+#[macro_use]
+extern crate error_chain;
+extern crate crc16;
 
 
 #[cfg(test)]
@@ -42,37 +47,6 @@ pub use contracts::*;
 mod queries;
 pub use queries::*;
 
-#[derive(Debug, Deserialize)]
-pub struct TonError {
-    source: String,
-    code: u32,
-    message: String,
-}
-
-
-
-impl TonError {
-
-    fn sdk(code: u32, message: &str) -> Self {
-        Self {
-            source: "sdk".to_string(),
-            code,
-            message: message.to_string(),
-        }
-    }
-
-    pub fn invalid_params(method_name: &str) -> Self {
-        Self::sdk(1, &format!("Can not serialize params for {}", method_name))
-    }
-
-    pub fn invalid_response_result(method_name: &str, result_json: &String) -> Self {
-        Self::sdk(2, &format!("Can not deserialize result for {}\nresult JSON: {}", method_name, result_json))
-    }
-
-    pub fn invalid_response_error(method_name: &str, error_json: &String) -> Self {
-        Self::sdk(3, &format!("Can not deserialize error for {}\nerror JSON: {}", method_name, error_json))
-    }
-}
-
-pub type TonResult<R> = Result<R, TonError>;
+mod error;
+pub use error::*;
 
