@@ -19,7 +19,7 @@ mod test_piggy;
 fn test_contracts() {
     // Deploy Messages
 
-    let ton = TonClient::new_with_base_url("http://192.168.99.100").unwrap();
+    let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
 	
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
 	    

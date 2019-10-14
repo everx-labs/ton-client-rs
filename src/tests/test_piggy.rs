@@ -31,7 +31,7 @@ const ACCOUNT_FIELDS: &str = r#"
 
 #[test]
 fn test_piggy() {
-    let ton = TonClient::new_with_base_url("http://192.168.99.100").unwrap();
+    let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
     let prepared_address = ton.contracts.get_deploy_address(
