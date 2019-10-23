@@ -1,8 +1,8 @@
 # ton-client-rs
 
-TON SDK Client Library for Rust.
+TON Labs SDK Client Library for Rust.
 
-All useful info see at https://docs.ton.dev
+See https://docs.ton.dev for documentation
 
 ---
 Copyright 2018-2019 TON DEV SOLUTIONS LTD.
