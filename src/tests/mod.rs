@@ -59,7 +59,7 @@ pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress) {
 
 	// wait for grams recieving
 	let wait_result = ton.queries.accounts.wait_for(&json!({
-			"id": { "eq": account.get_account_hex_string() },
+			"id": { "eq": account.to_string() },
 			"storage": {
 				"balance": {
 					"Grams": { "gt": "0" }
@@ -87,7 +87,7 @@ fn test_decode_input() {
 	assert_eq!(result.output, json!({ "type": "0x1", "value": "0x3b9aca00", "meta": "x01"}));
 }
 
-const GIVER_ADDRESS: &str = "a46af093b38fcae390e9af5104a93e22e82c29bcb35bf88160e4478417028884";
+const GIVER_ADDRESS: &str = "0:a46af093b38fcae390e9af5104a93e22e82c29bcb35bf88160e4478417028884";
 const GIVER_ABI: &str = r#"
 {
 	"ABI version": 1,
