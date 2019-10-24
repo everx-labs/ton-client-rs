@@ -1,8 +1,15 @@
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InnerSdkError {
     pub source: String,
-    pub code: usize,
+    pub code: isize,
     pub message: String,
+    pub data: Option<ApiErrorData>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ApiErrorData {
+    pub transaction_id: String,
+    pub phase: String,
 }
 
 error_chain! {
@@ -54,7 +61,14 @@ error_chain! {
         }
         InnerSdkError(inner: InnerSdkError) {
             description("Inner SDK error"),
-            display("Inner SDK error.\nsource: {}\ncode: {}\n message: {}", inner.source, inner.code, inner.message)
+            display(
+                "Inner SDK error.\n source: {}\n code: {}\n message: {}\n data.phase: {}\n data.transaction_id: {}",
+                inner.source,
+                inner.code,
+                inner.message,
+                if inner.data.is_some() {&inner.data.as_ref().unwrap().phase} else {"null"},
+                if inner.data.is_some() {&inner.data.as_ref().unwrap().transaction_id} else {"null"},
+            )
         }
     }
 }

@@ -48,7 +48,7 @@ fn test_contracts() {
 
 #[test]
 fn test_call_aborted_transaction() {
-    // Deploy Messages
+	use crate::error::{TonError, TonErrorKind::InnerSdkError};
 
     let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
 	
@@ -78,9 +78,18 @@ fn test_call_aborted_transaction() {
 			"bounce": false
 		}).to_string().into(),
         Some(&keys)
-	);
-    
-	println!("result = {:?}", result);
+	)
+	.unwrap_err();
+
+	match result {
+		TonError(InnerSdkError(err), _) => {
+			assert_eq!(&err.source, "node");
+			assert_eq!(err.code, 102);
+			assert_eq!(err.data.is_some(), true);
+			assert_eq!(&err.data.as_ref().unwrap().phase, "computeVm");
+		},
+		_ => panic!(),
+	};
 }
 
 pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress) {
