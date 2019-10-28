@@ -46,6 +46,54 @@ fn test_contracts() {
     println!("{}", version)
 }
 
+#[test]
+fn test_call_aborted_transaction() {
+	use crate::error::{TonError, TonErrorKind::InnerSdkError};
+
+    let ton = TonClient::new_with_base_url("http://192.168.99.100").unwrap();
+	
+    let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
+	    
+	let prepared_wallet_address = ton.contracts.get_deploy_address(
+        &base64::decode(WALLET_CODE_BASE64).unwrap(),
+        &keys).unwrap();
+
+	get_grams_from_giver(&ton, &prepared_wallet_address);
+
+    let address = ton.contracts.deploy(
+        WALLET_ABI,
+        &base64::decode(WALLET_CODE_BASE64).unwrap(),
+        json!({}).to_string().into(),
+        &keys).unwrap();
+
+	assert_eq!(prepared_wallet_address, address);
+
+    let result = ton.contracts.run(
+        &address,
+        WALLET_ABI,
+        "sendTransaction",
+        json!({
+			"dest": 0,
+			"value": 0,
+			"bounce": false
+		}).to_string().into(),
+        Some(&keys)
+	)
+	.unwrap_err();
+
+	println!("Error: {}", result);
+
+	match result {
+		TonError(InnerSdkError(err), _) => {
+			assert_eq!(&err.source, "node");
+			assert_eq!(err.code, 102);
+			assert_eq!(err.data.is_some(), true);
+			assert_eq!(&err.data.as_ref().unwrap().phase, "computeVm");
+		},
+		_ => panic!(),
+	};
+}
+
 pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress) {
 	ton.contracts.run(
         &TonAddress::from_str(GIVER_ADDRESS).unwrap(),
