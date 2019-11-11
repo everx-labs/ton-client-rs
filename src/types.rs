@@ -18,12 +18,9 @@ use std::convert::TryFrom;
 use crate::error::*;
 
 /// Enum representing possible TON blockchain internal account addresses.
-/// For now only `StdShort` address is supported by core library so all variants are 
-/// come down to `StdShort` variant while calling core library
 #[derive(Clone, PartialEq, Debug)]
 pub enum TonAddress {
-    StdShort([u8; 32]),
-    StdFull(i8, [u8; 32]),
+    Std(i8, [u8; 32]),
     Var(i32, Vec<u8>),
     AnycastStd(u8, u32, i8, [u8; 32]),
     AnycastVar(u8, u32, i32, Vec<u8>),
@@ -64,9 +61,7 @@ impl TonAddress {
     /// Returns hex-string representation of account ID (not fully qualified address)
     pub fn get_account_hex_string(&self) -> String {
         match self {
-            TonAddress::StdShort(a) =>
-                hex::encode(a),
-            TonAddress::StdFull(_, a) =>
+            TonAddress::Std(_, a) =>
                 hex::encode(a),
             TonAddress::Var(_, a) =>
                 hex::encode(a),
@@ -80,7 +75,7 @@ impl TonAddress {
     fn decode_std_short(data: &str) -> TonResult<Self> {
         let vec = hex::decode(data)?;
 
-        Ok(TonAddress::StdShort(<[u8; 32]>::try_from(&vec[..])?))
+        Ok(TonAddress::Std(0, <[u8; 32]>::try_from(&vec[..])?))
     }
     
     fn decode_std_base64(data: &str) -> TonResult<Self> {
@@ -104,7 +99,7 @@ impl TonAddress {
                 format!("base64 address invalid tag \"{}\"", data))));
         }
 
-        Ok(TonAddress::StdFull(
+        Ok(TonAddress::Std(
             i8::from_be_bytes(<[u8; 1]>::try_from(&vec[1..2])?),
             <[u8; 32]>::try_from(&vec[2..34])?))
     }
@@ -117,7 +112,7 @@ impl TonAddress {
                 format!("Malformed std hex address. No \":\" delimiter. \"{}\"", data))));
         }
 
-        Ok(TonAddress::StdFull(
+        Ok(TonAddress::Std(
             i8::from_str_radix(vec[0], 10)?,
             <[u8; 32]>::try_from(&hex::decode(vec[1])?[..])?))
     }
@@ -154,9 +149,7 @@ fn fmt_addr(
 impl std::fmt::Display for TonAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            TonAddress::StdShort( a) =>
-                fmt_addr(f, None, None, Some(a)),
-            TonAddress::StdFull(w, a) =>
+            TonAddress::Std(w, a) =>
                 fmt_addr(f, None, Some(*w as i32), Some(a)),
             TonAddress::Var(w, a) =>
                 fmt_addr(f, None, Some(*w), Some(a)),
@@ -175,8 +168,8 @@ fn test_address_parsing() {
     let base64 = "kf/8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15+KsQHFLbKSMiYIny";
     let base64_url = "kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny";
 
-    let full_address = TonAddress::StdFull(-1, <[u8;32]>::try_from(&hex::decode(short).unwrap()[..]).unwrap());
-    let short_address = TonAddress::StdShort(<[u8;32]>::try_from(&hex::decode(short).unwrap()[..]).unwrap());
+    let full_address = TonAddress::Std(-1, <[u8;32]>::try_from(&hex::decode(short).unwrap()[..]).unwrap());
+    let short_address = TonAddress::Std(0, <[u8;32]>::try_from(&hex::decode(short).unwrap()[..]).unwrap());
 
     assert_eq!(short_address, TonAddress::from_str(short).expect("Couldn't parse short address"));
     assert_eq!(full_address, TonAddress::from_str(full_std).expect("Couldn't parse full_std address"));

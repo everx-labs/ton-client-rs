@@ -19,14 +19,6 @@ use futures::stream::Stream;
 
 const ACCOUNT_FIELDS: &str = r#"
     id
-    addr {
-        ...on MsgAddressIntAddrStdVariant {
-            AddrStd {
-                workchain_id
-                address
-            }
-        }
-    }
 "#;
 
 #[test]
@@ -78,12 +70,6 @@ fn test_piggy() {
         query_result[0],
         json!({
             "id": piggy_bank_address.to_string(),
-            "addr": {
-                "AddrStd": {
-                    "address": piggy_bank_address.to_string(),
-                    "workchain_id": 0
-                }
-            }
         }));
 
     let wait_for_result = ton.queries.accounts.wait_for(
@@ -98,12 +84,6 @@ fn test_piggy() {
         wait_for_result,
         json!({
             "id": piggy_bank_address.to_string(),
-            "addr": {
-                "AddrStd": {
-                    "address": piggy_bank_address.to_string(),
-                    "workchain_id": 0
-                }
-            }
         }));
 
 
@@ -122,14 +102,19 @@ fn test_piggy() {
 
     super::get_grams_from_giver(&ton, &prepared_address);
 
-    let subscription_constructor_params = json!({ "wallet" : format!("0x{}", wallet_address)}).to_string().into();
+    let subscription_constructor_params = json!({
+        "wallet" : format!("0x{}", wallet_address.get_account_hex_string())
+    }).to_string().into();
+
     let subscripition_address = ton.contracts.deploy(
         SUBSCRIBE_ABI,
         &base64::decode(SUBSCRIBE_CODE_BASE64).unwrap(),
         subscription_constructor_params,
         &keypair,
     ).unwrap();
-    let set_subscription_params = json!({ "addr": format!("0x{}", subscripition_address) }).to_string().into();
+    let set_subscription_params = json!({
+            "addr": format!("0x{}", subscripition_address.get_account_hex_string())
+        }).to_string().into();
 
     // subscribe for updates 
     let subscribe_stream = ton.queries.accounts.subscribe(
@@ -157,7 +142,7 @@ fn test_piggy() {
         json!({
             "subscriptionId" : format!("0x{}", subscr_id_str),
             "pubkey" : format!("0x{}", pubkey_str),
-            "to": format!("0x{}", piggy_bank_address),
+            "to": format!("0x{}", piggy_bank_address.get_account_hex_string()),
             "value" : 123,
             "period" : 456
         }).to_string().into(),
@@ -175,12 +160,6 @@ fn test_piggy() {
         subscribe_result,
         json!({
             "id": subscripition_address.to_string(),
-            "addr": {
-                "AddrStd": {
-                    "address": subscripition_address.to_string(),
-                    "workchain_id": 0
-                }
-            }
         }));
 
     let subscr_id_str = hex::encode(&[0x22; 32]);
@@ -191,7 +170,7 @@ fn test_piggy() {
         json!({
             "subscriptionId" : format!("0x{}", subscr_id_str),
             "pubkey" : format!("0x{}", pubkey_str),
-            "to": format!("0x{}", piggy_bank_address),
+            "to": format!("0x{}", piggy_bank_address.get_account_hex_string()),
             "value" : 5000000000 as i64,
             "period" : 86400
         }).to_string().into(),
