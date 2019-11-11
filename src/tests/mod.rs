@@ -50,7 +50,7 @@ fn test_contracts() {
 fn test_call_aborted_transaction() {
 	use crate::error::{TonError, TonErrorKind::InnerSdkError};
 
-    let ton = TonClient::new_with_base_url("http://192.168.99.100").unwrap();
+    let ton = TonClient::new_with_base_url("http://0.0.0.0").unwrap();
 	
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
 	    
@@ -108,13 +108,9 @@ pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress) {
 	// wait for grams recieving
 	let wait_result = ton.queries.accounts.wait_for(&json!({
 			"id": { "eq": account.to_string() },
-			"storage": {
-				"balance": {
-					"Grams": { "gt": "0" }
-				}
-			}
+			"balance": { "gt": "0" }
 		}).to_string(),
-		"id storage {balance {Grams}}"
+		"id balance"
 	).unwrap();
 
 	println!("wait result {}", wait_result);
