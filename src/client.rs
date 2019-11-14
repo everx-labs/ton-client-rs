@@ -30,7 +30,6 @@ use crate::{TonCrypto, TonContracts, TonQueries, TonResult};
 #[derive(Default, Serialize)]
 #[serde(rename_all="camelCase")]
 pub struct TonClientConfig {
-    pub default_workchain: Option<i32>,
     pub base_url: Option<String>,
     pub requests_url: Option<String>,
     pub queries_url: Option<String>,
@@ -67,8 +66,7 @@ impl TonClient {
             base_url: Some(base_url.to_string()),
             requests_url: None,
             queries_url: None,
-            subscriptions_url: None,
-            default_workchain: Some(0)
+            subscriptions_url: None
         })
     }
 
