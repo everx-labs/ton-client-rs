@@ -128,7 +128,7 @@ fn test_decode_input() {
     let body = "te6ccgEBAgEA3wAB8y88h10AAAFuW6FWJBERERERERERERERERERERERERERERERERERERERERERIXxlwlrjEGJEDhx3dC3WlQeZKzuAYBDOJ8+g7AM+Ek6AF49G0+VDwIkQKBdIh7hi4J5F0T/g5OggwrHI4HGN1KHAAAAAAAAAD2AAADkQAQDADBiSeQ1t5j0LwYo9dx7wefpnCQ3KrYOeAhX9ZUux62yIxWdQdUHJGCXXcoLbrDDduL9sgKSZT3TzYpRKi8YqASF8ZcJa4xBiRA4cd3Qt1pUHmSs7gGAQzifPoOwDPhJO";
 	let body = base64::decode(body).unwrap();
 
-	let ton = create_client();
+	let ton = TonClient::default().unwrap();
 
     let result = ton.contracts.decode_input_message_body(test_piggy::SUBSCRIBE_ABI, &body).expect("Couldn't parse body");
 
