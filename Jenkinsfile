@@ -8,7 +8,7 @@ pipeline {
     stages { 
         stage('Started') {
             steps {
-                echo "Job: ${JOB_NAME}"
+                echo "Job name: ${JOB_NAME}"
             }
         }
     }
