@@ -12,11 +12,16 @@
  * limitations under the License.
  */
 
+use std::env;
 use crate::{TonClient, Ed25519KeyPair, TonAddress};
 mod test_piggy;
 
 pub fn create_client() -> TonClient {
-	TonClient::new_with_base_url("http://0.0.0.0").unwrap()
+	
+	let node_se_addr = env::var("NODE_SE_ADDRESS")
+		.unwrap_or("http://0.0.0.0".to_string());
+	
+	TonClient::new_with_base_url(&node_se_addr).unwrap()
 }
 
 #[test]
