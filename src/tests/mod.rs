@@ -18,7 +18,7 @@ mod test_piggy;
 
 pub fn create_client() -> TonClient {
 	
-	let node_se_addr = env::var("NODE_SE_ADDRESS")
+	let node_se_addr = env::var("TON_NETWORK_ADDRESS")
 		.unwrap_or("http://0.0.0.0".to_string());
 	
 	TonClient::new_with_base_url(&node_se_addr).unwrap()
