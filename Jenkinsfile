@@ -6,7 +6,7 @@ pipeline {
         parallelsAlwaysFailFast()
     }
     stages {
-        stage('Started') {
+        stage('Run tests') {
             steps {
                 echo """
                 Job name: ${JOB_NAME}
@@ -16,6 +16,22 @@ pipeline {
                 Git prev successful commit: ${GIT_PREVIOUS_SUCCESSFUL_COMMIT}
                 Git URL: ${GIT_URL}
                 """
+                script {
+                    def params = [
+                        [
+                            $class: 'StringParameterValue',
+                            name: 'ton_client_rs_branch',
+                            value: "${GIT_BRANCH}"
+                        ],
+                        [
+                            $class: 'StringParameterValue',
+                            name: 'ton_client_rs_commit',
+                            value: "${GIT_COMMIT}"
+                        ]
+                    ] 
+
+                    build job: "Integration/sdk-intg-test/feature-add-pipeline", parameters: params
+
             }
         }
     }
