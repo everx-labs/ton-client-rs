@@ -37,7 +37,7 @@ pipeline {
                         ]
                     ] 
 
-                    build job: "Integration/integration-tests/feature-ton-acquiring", parameters: params
+                    build job: "Integration/integration-tests/master", parameters: params
                 }
             }
         }
