@@ -1,6 +1,6 @@
 [package]
 name = "ton-client-rs"
-version = "0.18.0"
+version = "0.19.0"
 description = "TON SDK Client Library for Rust"
 authors = ["TON DEV SOLUTIONS LTD <support@tonlabs.io>"]
 edition = "2018"
