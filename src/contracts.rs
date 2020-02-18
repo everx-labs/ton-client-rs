@@ -39,6 +39,7 @@ pub(crate) struct ParamsOfGetDeployAddress {
 #[derive(Serialize, Deserialize)]
 pub struct ResultOfDeploy {
     pub address: TonAddress,
+    pub alreadyDeployed: bool, 
 }
 
 #[derive(Serialize)]
@@ -129,7 +130,7 @@ impl TonContracts {
         code: &[u8],
         constructor_params: RunParameters,
         keys: &Ed25519KeyPair,
-    ) -> TonResult<TonAddress> {
+    ) -> TonResult<ResultOfDeploy> {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
@@ -145,7 +146,7 @@ impl TonContracts {
             imageBase64: base64::encode(code),
             keyPair: keys.clone(),
         })?;
-        Ok(result.address)
+        Ok(result)
     }
 
     /// Run the contract function with given parameters

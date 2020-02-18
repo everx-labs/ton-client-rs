@@ -37,7 +37,9 @@ fn test_piggy() {
     let wallet_address = ton.contracts.deploy(
         WALLET_ABI,
         &base64::decode(WALLET_CODE_BASE64).unwrap(),
-        json!({}).to_string().into(), &keypair).unwrap();
+        json!({}).to_string().into(), &keypair)
+    .unwrap()
+    .address;
 
     let prepared_address = ton.contracts.get_deploy_address(
         &base64::decode(PIGGY_BANK_CODE_BASE64).unwrap(),
@@ -52,8 +54,9 @@ fn test_piggy() {
 	        "amount": 123,
 	        "goal": "536f6d6520676f616c"
         }).to_string().into(),
-        &keypair,
-    ).unwrap();
+        &keypair)
+    .unwrap()
+    .address;
 
     println!("address {}", piggy_bank_address);
 
@@ -112,8 +115,10 @@ fn test_piggy() {
         SUBSCRIBE_ABI,
         &base64::decode(SUBSCRIBE_CODE_BASE64).unwrap(),
         subscription_constructor_params,
-        &keypair,
-    ).unwrap();
+        &keypair)
+    .unwrap()
+    .address;
+    
     let set_subscription_params = json!({
             "addr": subscripition_address.to_string()
         }).to_string().into();
