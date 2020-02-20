@@ -31,9 +31,6 @@ use crate::{TonCrypto, TonContracts, TonQueries, TonResult};
 #[serde(rename_all="camelCase")]
 pub struct TonClientConfig {
     pub base_url: Option<String>,
-    pub requests_url: Option<String>,
-    pub queries_url: Option<String>,
-    pub subscriptions_url: Option<String>,
 }
 
 /// Entry point for TON blockchain interaction. Provides useful methods for TON clients
@@ -63,10 +60,7 @@ impl TonClient {
     /// `default_workchain` is set to 0.
     pub fn new_with_base_url(base_url: &str) -> TonResult<TonClient> {
         Self::new(&TonClientConfig {
-            base_url: Some(base_url.to_string()),
-            requests_url: None,
-            queries_url: None,
-            subscriptions_url: None
+            base_url: Some(base_url.to_string())
         })
     }
 

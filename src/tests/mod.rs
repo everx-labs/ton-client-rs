@@ -19,7 +19,7 @@ mod test_piggy;
 pub fn create_client() -> TonClient {
 	
 	let node_se_addr = env::var("TON_NETWORK_ADDRESS")
-		.unwrap_or("http://0.0.0.0".to_string());
+		.unwrap_or("http://localhost".to_string());
 	
 	TonClient::new_with_base_url(&node_se_addr).unwrap()
 }
@@ -38,16 +38,28 @@ fn test_contracts() {
 
 	get_grams_from_giver(&ton, &prepared_wallet_address);
 
-    let address = ton.contracts.deploy(
+    let deploy_result = ton.contracts.deploy(
         WALLET_ABI,
         &base64::decode(WALLET_CODE_BASE64).unwrap(),
         json!({}).to_string().into(),
         &keys).unwrap();
 
-	assert_eq!(prepared_wallet_address, address);
+	assert_eq!(prepared_wallet_address, deploy_result.address);
+	assert!(!deploy_result.alreadyDeployed);
+
+	// check that second deploy returns `alreadyDeployed == true`
+	let deploy_result = ton.contracts.deploy(
+        WALLET_ABI,
+        &base64::decode(WALLET_CODE_BASE64).unwrap(),
+        json!({}).to_string().into(),
+        &keys).unwrap();
+
+	assert_eq!(prepared_wallet_address, deploy_result.address);
+	assert!(deploy_result.alreadyDeployed);
+
 
     let result = ton.contracts.run(
-        &address,
+        &deploy_result.address,
         WALLET_ABI,
         "createOperationLimit",
         json!({
@@ -75,7 +87,9 @@ fn test_call_aborted_transaction() {
         WALLET_ABI,
         &base64::decode(WALLET_CODE_BASE64).unwrap(),
         json!({}).to_string().into(),
-        &keys).unwrap();
+		&keys)
+	.unwrap()
+	.address;
 
 	assert_eq!(prepared_wallet_address, address);
 
