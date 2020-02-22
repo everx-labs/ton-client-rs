@@ -1,0 +1,24 @@
+name: Release post-actions
+
+on: 
+  release: 
+    types: [published]
+
+jobs:
+  cargo-publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: cargo --version
+    - run: cargo publish --verbose --dry-run
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  send-discord-msg:
+    needs: cargo-publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@master
