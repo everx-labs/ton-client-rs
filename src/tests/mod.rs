@@ -21,7 +21,7 @@ lazy_static::lazy_static! {
     static ref WALLET_ADDRESS: TonAddress = TonAddress::from_str("0:5b168970a9c63dd5c42a6afbcf706ef652476bb8960a22e1d8a2ad148e60c0ea").unwrap();
 	static ref WALLET_KEYS: Option<Ed25519KeyPair> = get_wallet_keys();
 
-	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("2".to_owned()), 10).unwrap();
+	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("1".to_owned()), 10).unwrap();
 	static ref CONTRACTS_PATH: String = format!("src/tests/contracts/abi_v{}/", *ABI_VERSION);
 	static ref NODE_ADDRESS: String = env::var("TON_NETWORK_ADDRESS")
 		//.unwrap_or("cinet.tonlabs.io".to_owned());
@@ -65,16 +65,19 @@ fn test_contracts() {
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
 	    
 	let prepared_wallet_address = ton.contracts.get_deploy_address(
-        &WALLET_IMAGE,
+		&WALLET_ABI,
+		&WALLET_IMAGE,
+		None,
         &keys).unwrap();
 
 	get_grams_from_giver(&ton, &prepared_wallet_address);
 
     let deploy_result = ton.contracts.deploy(
-        &WALLET_ABI,
+		&WALLET_ABI,
 		&WALLET_IMAGE,
 		None,
-        json!({}).to_string().into(),
+		json!({}).to_string().into(),
+		None,
         &keys).unwrap();
 
 	assert_eq!(prepared_wallet_address, deploy_result.address);
@@ -82,10 +85,11 @@ fn test_contracts() {
 
 	// check that second deploy returns `alreadyDeployed == true`
 	let deploy_result = ton.contracts.deploy(
-        &WALLET_ABI,
+		&WALLET_ABI,
 		&WALLET_IMAGE,
 		None,
-        json!({}).to_string().into(),
+		json!({}).to_string().into(),
+		None,
         &keys).unwrap();
 
 	assert_eq!(prepared_wallet_address, deploy_result.address);
@@ -129,16 +133,19 @@ fn test_call_aborted_transaction() {
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
 	    
 	let prepared_wallet_address = ton.contracts.get_deploy_address(
-        &SIMPLE_WALLET_IMAGE,
+		&SIMPLE_WALLET_ABI,
+		&SIMPLE_WALLET_IMAGE,
+		None,
         &keys).unwrap();
 
 	get_grams_from_giver(&ton, &prepared_wallet_address);
 
     let address = ton.contracts.deploy(
-        &SIMPLE_WALLET_ABI,
+		&SIMPLE_WALLET_ABI,
 		&SIMPLE_WALLET_IMAGE,
 		None,
-        json!({}).to_string().into(),
+		json!({}).to_string().into(),
+		None,
 		&keys)
 	.unwrap()
 	.address;
@@ -229,4 +236,39 @@ fn test_decode_input() {
         "to": "0:f9c4f95cad2ec18460caf07c280f001d5d049b933d399af7ad4c40f77d4b3030",
         "value": "0x12a05f200"
     }));
+}
+
+#[test]
+fn test_init_state() {
+
+	if *ABI_VERSION == 2 {
+		return;
+	}
+
+    let subscription_address1 = "0:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    let subscription_address2 = "0:fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321";
+
+	let ton = create_client();
+	
+    let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
+	    
+	let wallet_address1 = ton.contracts.get_deploy_address(
+		&WALLET_ABI,
+		&WALLET_IMAGE,
+		Some(json!({
+			"subscription": subscription_address1,
+            "owner": "0x".to_owned() + &keys.public.to_string(),
+		}).to_string().into()),
+		&keys).unwrap();
+		
+	let wallet_address2 = ton.contracts.get_deploy_address(
+		&WALLET_ABI,
+		&WALLET_IMAGE,
+		Some(json!({
+			"subscription": subscription_address2,
+			"owner": "0x".to_owned() + &keys.public.to_string(),
+		}).to_string().into()),
+		&keys).unwrap();
+
+	assert_ne!(wallet_address1, wallet_address2);
 }

@@ -23,6 +23,7 @@ pub(crate) struct ParamsOfDeploy {
     pub abi: serde_json::Value,
     pub constructorHeader: Option<serde_json::Value>,
     pub constructorParams: serde_json::Value,
+    pub initParams: Option<serde_json::Value>,
     pub imageBase64: String,
     pub keyPair: Ed25519KeyPair,
 }
@@ -32,6 +33,7 @@ pub(crate) struct ParamsOfDeploy {
 pub(crate) struct ParamsOfGetDeployAddress {
     pub abi: serde_json::Value,
     pub imageBase64: String,
+    pub initParams: Option<serde_json::Value>,
     pub keyPair: Ed25519KeyPair,
 }
 
@@ -112,15 +114,21 @@ impl TonContracts {
     /// Get address for contract deploying
     pub fn get_deploy_address(
         &self,
+        abi: &str,
         code: &[u8],
+        init_params: Option<RunParameters>,
         keys: &Ed25519KeyPair,
     ) -> TonResult<TonAddress> {
+        let abi = serde_json::from_str(abi)
+            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
+
         let result: TonAddress = Interop::json_request(
             self.context,
             "contracts.deploy.address",
             ParamsOfGetDeployAddress {
-                abi: Value::Null,
+                abi,
                 imageBase64: base64::encode(code),
+                initParams: Self::option_params_to_value(init_params)?,
                 keyPair: keys.clone(),
             })?;
         Ok(result)
@@ -134,6 +142,13 @@ impl TonContracts {
             .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()).into())
     }
 
+    fn option_params_to_value(params: Option<RunParameters>) -> TonResult<Option<Value>> {
+        match params {
+            Some(params) => Ok(Some(Self::params_to_value(params)?)),
+            None => Ok(None)
+        }
+    }
+
     /// Deploy contract to TON blockchain
     pub fn deploy(
         &self,
@@ -141,19 +156,16 @@ impl TonContracts {
         code: &[u8],
         constructor_header: Option<RunParameters>,
         constructor_params: RunParameters,
+        init_params: Option<RunParameters>,
         keys: &Ed25519KeyPair,
     ) -> TonResult<ResultOfDeploy> {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
-        let header = match constructor_header {
-            Some(header) => Some(Self::params_to_value(header)?),
-            None => None
-        };
-
         Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
             abi,
-            constructorHeader: header,
+            initParams: Self::option_params_to_value(init_params)?,
+            constructorHeader: Self::option_params_to_value(constructor_header)?,
             constructorParams: Self::params_to_value(constructor_params)?,
             imageBase64: base64::encode(code),
             keyPair: keys.clone(),

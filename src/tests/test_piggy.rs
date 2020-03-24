@@ -29,7 +29,9 @@ fn test_piggy() {
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
     let prepared_address = ton.contracts.get_deploy_address(
+        &WALLET_ABI,
         &WALLET_IMAGE,
+        None,
         &keypair).unwrap();
 
     super::get_grams_from_giver(&ton, &prepared_address);
@@ -39,12 +41,15 @@ fn test_piggy() {
         &WALLET_IMAGE,
         None,
         json!({}).to_string().into(),
+        None,
         &keypair)
     .unwrap()
     .address;
 
     let prepared_address = ton.contracts.get_deploy_address(
+        &PIGGY_BANK_ABI,
         &PIGGY_BANK_IMAGE,
+        None,
         &keypair).unwrap();
 
     super::get_grams_from_giver(&ton, &prepared_address);
@@ -57,6 +62,7 @@ fn test_piggy() {
 	        "amount": 123,
 	        "goal": "536f6d6520676f616c"
         }).to_string().into(),
+        None,
         &keypair)
     .unwrap()
     .address;
@@ -106,7 +112,9 @@ fn test_piggy() {
     println!("getGoal answer {}", get_goal_answer);
 
     let prepared_address = ton.contracts.get_deploy_address(
+        &SUBSCRIBE_ABI,
         &SUBSCRIBE_IMAGE,
+        None,
         &keypair).unwrap();
 
     super::get_grams_from_giver(&ton, &prepared_address);
@@ -120,6 +128,7 @@ fn test_piggy() {
         &SUBSCRIBE_IMAGE,
         None,
         subscription_constructor_params,
+        None,
         &keypair)
     .unwrap()
     .address;
