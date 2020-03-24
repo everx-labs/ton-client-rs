@@ -21,6 +21,7 @@ use crate::interop::{InteropContext, Interop};
 #[allow(non_snake_case)]
 pub(crate) struct ParamsOfDeploy {
     pub abi: serde_json::Value,
+    pub constructorHeader: Option<serde_json::Value>,
     pub constructorParams: serde_json::Value,
     pub imageBase64: String,
     pub keyPair: Ed25519KeyPair,
@@ -48,6 +49,7 @@ pub(crate) struct ParamsOfRun {
     pub address: TonAddress,
     pub abi: serde_json::Value,
     pub functionName: String,
+    pub header: Option<serde_json::Value>,
     pub input: serde_json::Value,
     pub keyPair: Option<Ed25519KeyPair>,
 }
@@ -59,6 +61,7 @@ pub(crate) struct ParamsOfLocalRun {
     pub account: Option<serde_json::Value>,
     pub abi: serde_json::Value,
     pub functionName: String,
+    pub header: Option<serde_json::Value>,
     pub input: serde_json::Value,
     pub keyPair: Option<Ed25519KeyPair>,
 }
@@ -123,30 +126,38 @@ impl TonContracts {
         Ok(result)
     }
 
+    fn params_to_value(params: RunParameters) -> TonResult<Value> {
+        let str_params = match &params {
+            RunParameters::Json(string) => string
+        };
+       serde_json::from_str(str_params)
+            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()).into())
+    }
+
     /// Deploy contract to TON blockchain
     pub fn deploy(
         &self,
         abi: &str,
         code: &[u8],
+        constructor_header: Option<RunParameters>,
         constructor_params: RunParameters,
         keys: &Ed25519KeyPair,
     ) -> TonResult<ResultOfDeploy> {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
-        let str_params = match &constructor_params {
-            RunParameters::Json(string) => string
+        let header = match constructor_header {
+            Some(header) => Some(Self::params_to_value(header)?),
+            None => None
         };
-        let params_value = serde_json::from_str(str_params)
-            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
-        let result: ResultOfDeploy = Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
+        Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
             abi,
-            constructorParams: params_value,
+            constructorHeader: header,
+            constructorParams: Self::params_to_value(constructor_params)?,
             imageBase64: base64::encode(code),
             keyPair: keys.clone(),
-        })?;
-        Ok(result)
+        })
     }
 
     /// Run the contract function with given parameters
@@ -155,26 +166,26 @@ impl TonContracts {
         address: &TonAddress,
         abi: &str,
         function_name: &str,
+        header: Option<RunParameters>,
         input: RunParameters,
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-        
-        let str_params = match &input {
-            RunParameters::Json(string) => string
-        };
-        let params_value = serde_json::from_str(str_params)
-            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
-        let result: ResultOfRun = Interop::json_request(self.context, "contracts.run", ParamsOfRun {
+        let header = match header {
+            Some(header) => Some(Self::params_to_value(header)?),
+            None => None
+        };
+        
+        Interop::json_request(self.context, "contracts.run", ParamsOfRun {
             address: address.clone(),
             abi,
             functionName: function_name.to_string(),
-            input: params_value,
+            header,
+            input: Self::params_to_value(input)?,
             keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
-        })?;
-        Ok(result.output)
+        })
     }
 
     /// Run the contract function with given parameters locally
@@ -184,17 +195,17 @@ impl TonContracts {
         account: Option<&str>,
         abi: &str,
         function_name: &str,
+        header: Option<RunParameters>,
         input: RunParameters,
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
         
-        let str_params = match &input {
-            RunParameters::Json(string) => string
+        let header = match header {
+            Some(header) => Some(Self::params_to_value(header)?),
+            None => None
         };
-        let params_value = serde_json::from_str(str_params)
-            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()))?;
 
         let account = match account {
             Some(acc_str) => {
@@ -209,7 +220,8 @@ impl TonContracts {
             account,
             abi,
             functionName: function_name.to_string(),
-            input: params_value,
+            header,
+            input: Self::params_to_value(input)?,
             keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
         })?;
         Ok(result.output)
