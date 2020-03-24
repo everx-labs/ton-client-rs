@@ -21,7 +21,7 @@ lazy_static::lazy_static! {
     static ref WALLET_ADDRESS: TonAddress = TonAddress::from_str("0:5b168970a9c63dd5c42a6afbcf706ef652476bb8960a22e1d8a2ad148e60c0ea").unwrap();
 	static ref WALLET_KEYS: Option<Ed25519KeyPair> = get_wallet_keys();
 
-	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("1".to_owned()), 10).unwrap();
+	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("2".to_owned()), 10).unwrap();
 	static ref CONTRACTS_PATH: String = format!("src/tests/contracts/abi_v{}/", *ABI_VERSION);
 	static ref NODE_ADDRESS: String = env::var("TON_NETWORK_ADDRESS")
 		//.unwrap_or("cinet.tonlabs.io".to_owned());
