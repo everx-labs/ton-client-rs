@@ -122,7 +122,7 @@ impl TonContracts {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
-        let result: TonAddress = Interop::json_request(
+        Interop::json_request(
             self.context,
             "contracts.deploy.address",
             ParamsOfGetDeployAddress {
@@ -130,8 +130,7 @@ impl TonContracts {
                 imageBase64: base64::encode(code),
                 initParams: Self::option_params_to_value(init_params)?,
                 keyPair: keys.clone(),
-            })?;
-        Ok(result)
+            })
     }
 
     fn params_to_value(params: RunParameters) -> TonResult<Value> {
@@ -227,7 +226,7 @@ impl TonContracts {
             None => None
         };
 
-        let result: ResultOfRun = Interop::json_request(self.context, "contracts.run.local", ParamsOfLocalRun {
+        Interop::json_request(self.context, "contracts.run.local", ParamsOfLocalRun {
             address: address.clone(),
             account,
             abi,
@@ -235,8 +234,7 @@ impl TonContracts {
             header,
             input: Self::params_to_value(input)?,
             keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
-        })?;
-        Ok(result.output)
+        })
     }
 
     /// Decodes external inbound message body with encoded contract call parameters
