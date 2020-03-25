@@ -32,7 +32,8 @@ fn test_piggy() {
         &WALLET_ABI,
         &WALLET_IMAGE,
         None,
-        &keypair).unwrap();
+        &keypair.public,
+        0).unwrap();
 
     super::get_grams_from_giver(&ton, &prepared_address);
 
@@ -42,7 +43,8 @@ fn test_piggy() {
         None,
         json!({}).to_string().into(),
         None,
-        &keypair)
+        &keypair,
+        0)
     .unwrap()
     .address;
 
@@ -50,7 +52,8 @@ fn test_piggy() {
         &PIGGY_BANK_ABI,
         &PIGGY_BANK_IMAGE,
         None,
-        &keypair).unwrap();
+        &keypair.public,
+        0).unwrap();
 
     super::get_grams_from_giver(&ton, &prepared_address);
 
@@ -63,7 +66,8 @@ fn test_piggy() {
 	        "goal": "536f6d6520676f616c"
         }).to_string().into(),
         None,
-        &keypair)
+        &keypair,
+        0)
     .unwrap()
     .address;
 
@@ -115,7 +119,8 @@ fn test_piggy() {
         &SUBSCRIBE_ABI,
         &SUBSCRIBE_IMAGE,
         None,
-        &keypair).unwrap();
+        &keypair.public,
+        0).unwrap();
 
     super::get_grams_from_giver(&ton, &prepared_address);
 
@@ -129,7 +134,8 @@ fn test_piggy() {
         None,
         subscription_constructor_params,
         None,
-        &keypair)
+        &keypair,
+        0)
     .unwrap()
     .address;
     

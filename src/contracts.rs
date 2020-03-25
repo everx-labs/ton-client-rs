@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-use crate::{Ed25519KeyPair, TonAddress};
+use crate::{Ed25519KeyPair, Ed25519Public, TonAddress};
 use crate::error::*;
 use serde_json::Value;
 use crate::interop::{InteropContext, Interop};
@@ -26,23 +26,40 @@ pub(crate) struct ParamsOfDeploy {
     pub initParams: Option<serde_json::Value>,
     pub imageBase64: String,
     pub keyPair: Ed25519KeyPair,
+    pub workchainId: i32,
+}
+
+/// Result of `deploy` function running. Contains address of the contract
+#[allow(non_snake_case)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct ResultOfDeploy {
+    pub address: TonAddress,
+    pub alreadyDeployed: bool, 
 }
 
 #[derive(Serialize)]
 #[allow(non_snake_case)]
-pub(crate) struct ParamsOfGetDeployAddress {
-    pub abi: serde_json::Value,
-    pub imageBase64: String,
+pub(crate) struct ParamsOfGetDeployData {
+    pub abi: Option<serde_json::Value>,
+    pub imageBase64: Option<String>,
     pub initParams: Option<serde_json::Value>,
-    pub keyPair: Ed25519KeyPair,
+    pub publicKeyHex: Ed25519Public,
+    pub workchainId: Option<i32>,
 }
 
-/// Result of `deploy` and `get_deploy_address` function running. Contains address of the contract
-#[allow(non_snake_case)]
 #[derive(Serialize, Deserialize)]
-pub struct ResultOfDeploy {
-    pub address: TonAddress,
-    pub alreadyDeployed: bool, 
+#[allow(non_snake_case)]
+pub(crate) struct ResultOfGetDeployDataCore {
+    pub imageBase64: Option<String>,
+    pub address: Option<String>,
+    pub dataBase64: String,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ResultOfGetDeployData {
+    pub image: Option<Vec<u8>>,
+    pub address: Option<TonAddress>,
+    pub data: Vec<u8>,
 }
 
 #[derive(Serialize)]
@@ -70,12 +87,12 @@ pub(crate) struct ParamsOfLocalRun {
 
 /// Result of `run` function running. Contains parameters returned by contract function
 #[allow(non_snake_case)]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct ResultOfRun {
     pub output: Value
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[allow(non_snake_case)]
 pub struct ParamsOfDecodeMessageBody {
     pub abi: serde_json::Value,
@@ -83,7 +100,7 @@ pub struct ParamsOfDecodeMessageBody {
 }
 
 #[allow(non_snake_case)]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct ResultOfDecodeMessageBody {
     pub function: String,
     pub output: serde_json::Value
@@ -115,22 +132,45 @@ impl TonContracts {
     pub fn get_deploy_address(
         &self,
         abi: &str,
-        code: &[u8],
+        image: &[u8],
         init_params: Option<RunParameters>,
-        keys: &Ed25519KeyPair,
+        public_key: &Ed25519Public,
+        workchain_id: i32,
     ) -> TonResult<TonAddress> {
-        let abi = serde_json::from_str(abi)
-            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
+        self.get_deploy_data(Some(abi), Some(image), init_params, public_key, Some(workchain_id))?
+            .address
+            .ok_or(TonErrorKind::InternalError("No address in result".to_owned()).into())
+    }
 
-        Interop::json_request(
+    /// Get address for contract deploying
+    pub fn get_deploy_data(
+        &self,
+        abi: Option<&str>,
+        image: Option<&[u8]>,
+        init_params: Option<RunParameters>,
+        public_key: &Ed25519Public,
+        workchain_id: Option<i32>,
+    ) -> TonResult<ResultOfGetDeployData> {
+        let abi = abi.map(|val| 
+                serde_json::from_str(val).map_err(|_| TonErrorKind::InvalidArg(val.to_owned())))
+            .transpose()?;
+
+        let core_result: ResultOfGetDeployDataCore = Interop::json_request(
             self.context,
-            "contracts.deploy.address",
-            ParamsOfGetDeployAddress {
+            "contracts.deploy.data",
+            ParamsOfGetDeployData {
                 abi,
-                imageBase64: base64::encode(code),
+                imageBase64: image.map(|val| base64::encode(val)),
                 initParams: Self::option_params_to_value(init_params)?,
-                keyPair: keys.clone(),
-            })
+                publicKeyHex: public_key.clone(),
+                workchainId: workchain_id,
+            })?;
+
+        Ok(ResultOfGetDeployData {
+            address: core_result.address.map(|val| TonAddress::from_str(&val)).transpose()?,
+            image: core_result.imageBase64.map(|val| base64::decode(&val).into()).transpose()?,
+            data: base64::decode(&core_result.dataBase64)?
+        })
     }
 
     fn params_to_value(params: RunParameters) -> TonResult<Value> {
@@ -157,6 +197,7 @@ impl TonContracts {
         constructor_params: RunParameters,
         init_params: Option<RunParameters>,
         keys: &Ed25519KeyPair,
+        workchain_id: i32,
     ) -> TonResult<ResultOfDeploy> {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
@@ -168,6 +209,7 @@ impl TonContracts {
             constructorParams: Self::params_to_value(constructor_params)?,
             imageBase64: base64::encode(code),
             keyPair: keys.clone(),
+            workchainId: workchain_id,
         })
     }
 
