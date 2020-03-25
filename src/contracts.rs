@@ -142,7 +142,7 @@ impl TonContracts {
             .ok_or(TonErrorKind::InternalError("No address in result".to_owned()).into())
     }
 
-    /// Get address for contract deploying
+    /// Get contract deploy data: image (state init), storage data and deploying address
     pub fn get_deploy_data(
         &self,
         abi: Option<&str>,
