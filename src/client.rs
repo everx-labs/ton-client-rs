@@ -28,14 +28,14 @@ use crate::{TonCrypto, TonContracts, TonQueries, TonResult};
 /// for retriyng messages. `message_expiration_timeout` for each retry is calculated by formula
 /// `message_expiration_timeout * message_expiration_timeout_grow_factor^retry_index`. Default is 1.5
 /// 
-/// `message_processing_timeout` sets timeout for processing messages to contracts which don't support
+/// `message_processing_timeout` sets timeout in ms for processing messages to contracts which don't support
 /// message expiration. It is also used for waiting blocks after message expiration time ends.assert_eq!
 /// 
 /// `message_processing_timeout_grow_factor` sets `message_processing_timeout` multiplying coefficient
 /// for retriyng messages. `message_processing_timeout` for each retry is calculated by formula
 /// `message_processing_timeout * message_processing_timeout_grow_factor^retry_index`. Default is 1.5
 /// 
-/// `wait_for_timeout` sets default timeout for `wait_for` function
+/// `wait_for_timeout` sets default timeout in ms for `wait_for` function
 /// 
 /// `access_key` is key for authenicating user to Tonlabs node
 /// 
