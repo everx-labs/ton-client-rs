@@ -17,20 +17,39 @@ use crate::{TonCrypto, TonContracts, TonQueries, TonResult};
 
 /// `TonClient` configuration. Contains optional fields with configuration parameters.
 /// 
-/// `default_workchain` sets target workchain for deploying and running contracts
+/// `base_url` is URL of the Tonlabs node to connect
 /// 
-/// `base_url` is used for deriving `requests_url`, `queries_url` and `subscriptions_url`
-///  values with default suffixes if ones are not set.
+/// `message_retries_count` sets message sending retries count. 0 to disable retrying. Default is 5.
 /// 
-/// `requests_url` points address for sending requests to node via http REST API
+/// `message_expiration_timeout` sets time in ms used to calculate for message expiration time if `expire`
+/// value is not set in contract function header params. Default is 10 seconds
 /// 
-/// `queries_url` points address of GraphQL server for quering blockchain data
+/// `message_expiration_timeout_grow_factor` sets `message_expiration_timeout` multiplying coefficient
+/// for retriyng messages. `message_expiration_timeout` for each retry is calculated by formula
+/// `message_expiration_timeout * message_expiration_timeout_grow_factor^retry_index`. Default is 1.5
 /// 
-/// `subscriptions_url` points address of GraphQL server for subscripitions on blockchain data updates
+/// `message_processing_timeout` sets timeout for processing messages to contracts which don't support
+/// message expiration. It is also used for waiting blocks after message expiration time ends.assert_eq!
+/// 
+/// `message_processing_timeout_grow_factor` sets `message_processing_timeout` multiplying coefficient
+/// for retriyng messages. `message_processing_timeout` for each retry is calculated by formula
+/// `message_processing_timeout * message_processing_timeout_grow_factor^retry_index`. Default is 1.5
+/// 
+/// `wait_for_timeout` sets default timeout for `wait_for` function
+/// 
+/// `access_key` is key for authenicating user to Tonlabs node
+/// 
 #[derive(Default, Serialize)]
 #[serde(rename_all="camelCase")]
 pub struct TonClientConfig {
     pub base_url: Option<String>,
+    pub message_retries_count: Option<u8>,
+    pub message_expiration_timeout: Option<u32>,
+    pub message_expiration_timeout_grow_factor: Option<f32>,
+    pub message_processing_timeout: Option<u32>,
+    pub message_processing_timeout_grow_factor: Option<f32>,
+    pub wait_for_timeout: Option<u32>,
+    pub access_key: Option<String>,
 }
 
 /// Entry point for TON blockchain interaction. Provides useful methods for TON clients
@@ -60,7 +79,8 @@ impl TonClient {
     /// `default_workchain` is set to 0.
     pub fn new_with_base_url(base_url: &str) -> TonResult<TonClient> {
         Self::new(&TonClientConfig {
-            base_url: Some(base_url.to_string())
+            base_url: Some(base_url.to_string()),
+            ..TonClientConfig::default()
         })
     }
 
