@@ -151,9 +151,9 @@ impl TonContracts {
         public_key: &Ed25519Public,
         workchain_id: Option<i32>,
     ) -> TonResult<ResultOfGetDeployData> {
-        let abi = abi.map(|val| 
-                serde_json::from_str(val).map_err(|_| TonErrorKind::InvalidArg(val.to_owned())))
-            .transpose()?;
+        let abi = abi.map(|val| {
+            serde_json::from_str(val).map_err(|_| TonErrorKind::InvalidArg(val.to_owned()))
+        }).transpose()?;
 
         let core_result: ResultOfGetDeployDataCore = Interop::json_request(
             self.context,
@@ -182,10 +182,7 @@ impl TonContracts {
     }
 
     fn option_params_to_value(params: Option<RunParameters>) -> TonResult<Option<Value>> {
-        match params {
-            Some(params) => Ok(Some(Self::params_to_value(params)?)),
-            None => Ok(None)
-        }
+        params.map(|params|  Self::params_to_value(params)).transpose()
     }
 
     /// Deploy contract to TON blockchain
@@ -226,16 +223,11 @@ impl TonContracts {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
-        let header = match header {
-            Some(header) => Some(Self::params_to_value(header)?),
-            None => None
-        };
-        
         Interop::json_request(self.context, "contracts.run", ParamsOfRun {
             address: address.clone(),
             abi,
             functionName: function_name.to_string(),
-            header,
+            header: Self::option_params_to_value(header)?,
             input: Self::params_to_value(input)?,
             keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
         })
@@ -254,26 +246,18 @@ impl TonContracts {
     ) -> TonResult<Value> {
         let abi = serde_json::from_str(abi)
            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-        
-        let header = match header {
-            Some(header) => Some(Self::params_to_value(header)?),
-            None => None
-        };
 
-        let account = match account {
-            Some(acc_str) => {
-                Some(serde_json::from_str(acc_str)
-                   .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))?)
-            },
-            None => None
-        };
+        let account = account.map(|acc_str| {
+                serde_json::from_str(acc_str)
+                    .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))
+        }).transpose()?;
 
         Interop::json_request(self.context, "contracts.run.local", ParamsOfLocalRun {
             address: address.clone(),
             account,
             abi,
             functionName: function_name.to_string(),
-            header,
+            header: Self::option_params_to_value(header)?,
             input: Self::params_to_value(input)?,
             keyPair: if let Some(keys) = keys { Some(keys.clone()) } else { None },
         })
