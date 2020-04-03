@@ -12,6 +12,7 @@
  * limitations under the License.
  */
 
+ /// Error returned from SDK core
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InnerSdkError {
     pub source: String,
@@ -20,6 +21,7 @@ pub struct InnerSdkError {
     pub data: Option<ApiErrorData>,
 }
 
+/// Information about aborted transaction
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ApiErrorData {
     pub transaction_id: String,

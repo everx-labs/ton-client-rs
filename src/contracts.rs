@@ -56,6 +56,8 @@ pub(crate) struct ResultOfGetDeployDataCore {
 }
 
 #[derive(Debug, PartialEq)]
+/// Result of `get_deploy_data` function call. Contains updated contract image, deploy address and
+/// stored data
 pub struct ResultOfGetDeployData {
     pub image: Option<Vec<u8>>,
     pub address: Option<TonAddress>,
@@ -94,11 +96,13 @@ pub struct ResultOfRun {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[allow(non_snake_case)]
-pub struct ParamsOfDecodeMessageBody {
+pub(crate) struct ParamsOfDecodeMessageBody {
     pub abi: serde_json::Value,
     pub bodyBase64: String,
 }
 
+/// Result of `decode_input_message_body` and `decode_output_message_body` functions calls.
+/// Contains contract function name and decoded parameters
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct ResultOfDecodeMessageBody {
