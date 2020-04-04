@@ -101,7 +101,7 @@ fn test_contracts() {
 
 	if *ABI_VERSION == 2 {
 		// check header params passing
-		let result = ton.contracts.run(
+		let mut message = ton.contracts.create_run_message(
 			&deploy_result.address,
 			&WALLET_ABI,
 			"createOperationLimit",
@@ -111,9 +111,22 @@ fn test_contracts() {
 			json!({
 				"value": 123
 			}).to_string().into(),
-			Some(&keys));
-		println!("{:?}", result);
-		assert!(result.is_err());
+			Some(&keys),
+			None).unwrap();
+
+		assert_eq!(message.expire, Some(123));
+		// set valid expire value in order to send message (core checks that message is not expired yet)
+		message.expire = Some(std::time::SystemTime::now()
+			.duration_since(std::time::SystemTime::UNIX_EPOCH)
+			.unwrap()
+			.as_secs() as u32 + 10);
+
+		let result = ton.contracts.process_message(message, None, None, None);
+
+		match result.unwrap_err().0 {
+			crate::error::TonErrorKind::InnerSdkError(err) => assert_eq!(err.code, 1006),
+			_ => panic!("InnerSdkError expected")
+		}
 	};
 
     let result = ton.contracts.run(
