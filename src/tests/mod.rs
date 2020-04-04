@@ -26,6 +26,7 @@ lazy_static::lazy_static! {
 	static ref NODE_ADDRESS: String = env::var("TON_NETWORK_ADDRESS")
 		//.unwrap_or("cinet.tonlabs.io".to_owned());
 		.unwrap_or("http://localhost".to_owned());
+		//.unwrap_or("net.ton.dev".to_owned());
 	static ref NODE_SE: bool = env::var("NODE_SE").unwrap_or("true".to_owned()) == "true".to_owned();
 
 	pub static ref SUBSCRIBE_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Subscription.abi.json").unwrap();
@@ -83,7 +84,7 @@ fn test_contracts() {
 		0).unwrap();
 
 	assert_eq!(prepared_wallet_address, deploy_result.address);
-	assert!(!deploy_result.alreadyDeployed);
+	assert!(!deploy_result.already_deployed);
 
 	// check that second deploy returns `alreadyDeployed == true`
 	let deploy_result = ton.contracts.deploy(
@@ -96,7 +97,7 @@ fn test_contracts() {
 		0).unwrap();
 
 	assert_eq!(prepared_wallet_address, deploy_result.address);
-	assert!(deploy_result.alreadyDeployed);
+	assert!(deploy_result.already_deployed);
 
 	if *ABI_VERSION == 2 {
 		// check header params passing
@@ -368,4 +369,98 @@ fn test_deploy_data() {
 		address: Some(TonAddress::from_str("-1:6195d78a0aae01af3584df743d3b2b08ceeff2a4e624a39d5b67fe1da8f5eb26").unwrap()),
 		data: base64::decode("te6ccgEBCQEAhwABAcABAgPOYAUCAgOsoAQDAEMgAREREREREREREREREREREREREREREREREREREREREREUAEEERERERERERERERERERERERERERERERERERERERERERGACAWIIBgEB3gcAA9AgAEHYiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIw=").unwrap(),
 	});
+}
+
+#[test]
+fn test_messages() {
+    let ton = create_client();
+
+    let keypair = ton.crypto.generate_ed25519_keys().unwrap();
+
+    let address = ton.contracts.get_deploy_address(
+        &WALLET_ABI,
+        &WALLET_IMAGE,
+        None,
+        &keypair.public,
+		0).unwrap();
+		
+	get_grams_from_giver(&ton, &address);
+	
+    let message = ton.contracts.create_deploy_message(
+        &WALLET_ABI,
+        &WALLET_IMAGE,
+        None,
+        json!({}).to_string().into(),
+        None,
+		&keypair,
+		0,
+		None).unwrap();
+	let msg_id = message.message.message_id.clone();
+	ton.contracts.send_message(message.message).unwrap();
+	
+	let deploy_transaction = ton.queries.transactions.wait_for(
+        &json!({
+            "in_msg": {
+                "eq": msg_id
+            }
+        }).to_string(),
+		"id aborted").unwrap();
+		
+	assert!(!deploy_transaction["aborted"].as_bool().unwrap());
+
+	// check processing with result decoding
+	let run_message = ton.contracts.create_run_message(
+		&address,
+		&WALLET_ABI,
+		"createOperationLimit",
+		None,
+		json!({
+			"value": 123
+		}).to_string().into(),
+		Some(&keypair),
+		None
+	).unwrap();
+
+	let run_result = ton.contracts.process_message(
+		run_message, Some(&WALLET_ABI), Some("createOperationLimit"), None).unwrap();
+
+	assert_eq!(run_result.output, json!({"value0": "0x0"}));
+
+	// check processing without result decoding
+	let run_message = ton.contracts.create_run_message(
+		&address,
+		&WALLET_ABI,
+		"createArbitraryLimit",
+		None,
+		json!({
+			"value": 123,
+			"period": 1
+		}).to_string().into(),
+		Some(&keypair),
+		Some(2)
+	).unwrap();
+
+	let run_result = ton.contracts.process_message(run_message, None, None, Some(2)).unwrap();
+
+	assert_eq!(run_result.output, json!(null));
+
+	// check processing transaction without output messages
+	let run_message = ton.contracts.create_run_message(
+		&address,
+		&WALLET_ABI,
+		"sendTransaction",
+		None,
+		json!({
+			"dest": address,
+			"value": 100_000_000,
+			"bounce": false
+		}).to_string().into(),
+		Some(&keypair),
+		None
+	).unwrap();
+
+	let run_result = ton.contracts.process_message(
+		run_message, Some(&WALLET_ABI), Some("sendTransaction"), None).unwrap();
+
+	assert_eq!(run_result.output, json!(null));
 }
