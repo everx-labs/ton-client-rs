@@ -428,7 +428,7 @@ fn test_messages() {
 		"createOperationLimit",
 		None,
 		json!({
-			"value": 123
+			"value": 100_000_000
 		}).to_string().into(),
 		Some(&keypair),
 		None
@@ -446,7 +446,7 @@ fn test_messages() {
 		"createArbitraryLimit",
 		None,
 		json!({
-			"value": 123,
+			"value": 100_000_000,
 			"period": 1
 		}).to_string().into(),
 		Some(&keypair),
@@ -464,7 +464,7 @@ fn test_messages() {
 		"sendTransaction",
 		None,
 		json!({
-			"dest": address,
+			"dest": WALLET_ADDRESS.to_string(),
 			"value": 100_000_000,
 			"bounce": false
 		}).to_string().into(),
