@@ -364,7 +364,7 @@ impl TonContracts {
         })
     }
 
-    /// Run the contract function with given parameters
+    /// Create message to run the contract function with given parameters
     pub fn create_run_message(
         &self,
         address: &TonAddress,
@@ -391,7 +391,7 @@ impl TonContracts {
         EncodedMessage::from_core(result)
     }
 
-    /// Run the contract function with given parameters
+    /// Create message to deploy contract
     pub fn create_deploy_message(
         &self,
         abi: &str,
