@@ -1,6 +1,12 @@
 # Release Notes
 All notable changes to this project will be documented in this file.
 
+## 0.21.200 - Apr 8, 2020
+### Featured
+- Message creating and processing functions added: `create_run_message`, `create_deploy_message`,
+`send_message`, `process_message`
+
+
 ## 0.21.0 - Apr 5, 2020
 ### Featured
 - ABI version 2 supported. See specification at https://docs.ton.dev
