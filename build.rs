@@ -14,6 +14,8 @@
 
 extern crate curl;
 extern crate flate2;
+#[macro_use]
+extern crate serde_derive;
 
 use std::env;
 use std::fs::File;
@@ -23,6 +25,7 @@ use std::io::Write;
 
 use flate2::read::GzDecoder;
 use curl::easy::Easy;
+use cargo_toml::Manifest;
 
 const BINARIES_URL: &str = "http://sdkbinaries.tonlabs.io";
 
@@ -35,10 +38,12 @@ fn main() {
 }
 
 fn extract<P: AsRef<Path>, P2: AsRef<Path>>(archive_path: P, extract_to: P2) {
-    let file = File::open(archive_path).unwrap();
-    let mut unzipped = GzDecoder::new(file);
-    let mut target_file = File::create(extract_to).unwrap();
-    std::io::copy(&mut unzipped, &mut target_file).unwrap();
+    if !extract_to.as_ref().exists() {
+        let file = File::open(archive_path).unwrap();
+        let mut unzipped = GzDecoder::new(file);
+        let mut target_file = File::create(extract_to).unwrap();
+        std::io::copy(&mut unzipped, &mut target_file).unwrap();
+    }
 }
 
 fn download_file(file_name: &str, download_dir: &PathBuf) {
@@ -65,14 +70,21 @@ fn download_file(file_name: &str, download_dir: &PathBuf) {
     }
 }
 
+#[derive(Deserialize)]
+struct Metadata {
+    binaries_version: String
+}
+
 // Downloads and unpacks a prebuilt binary
 fn install_binaries() {
-    // Figure out the file names.
-    let mut vec: Vec<&str> = env!("CARGO_PKG_VERSION").split(".").collect();
-    let patch = u32::from_str_radix(&vec[2], 10).unwrap();
-    let patch = format!("{}", patch - patch % 100);
-    vec[2] = &patch;
-    let version: String = vec.join("_");
+    // Take binaries version from manifest.
+    let manifest: Manifest<Metadata> = cargo_toml::Manifest::from_path_with_metadata(
+        env!("CARGO_MANIFEST_DIR").to_owned() + "/Cargo.toml").expect("Can not read manifest");
+    let dotted_version: String = manifest.package.expect("No package section")
+        .metadata.expect("No metadata")
+        .binaries_version;
+
+    let version = dotted_version.replace(".", "_");
 
     let files = if cfg!(target_os="windows") {
         vec![
@@ -88,6 +100,8 @@ fn install_binaries() {
     };
 
     let out = PathBuf::from(env::var("OUT_DIR").unwrap());
+
+    println!("Downloading binaries with version {}", dotted_version);
 
     for (file, target) in &files {
         download_file(&file, &out);
