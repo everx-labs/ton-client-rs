@@ -9,10 +9,11 @@
             ]
         },
         {
-            "name": "sendGrams",
+            "name": "sendTransaction",
             "inputs": [
                 {"name":"dest","type":"address"},
-                {"name":"amount","type":"uint64"}
+                {"name":"value","type":"uint128"},
+                {"name":"bounce","type":"bool"}
             ],
             "outputs": [
             ]
@@ -21,5 +22,6 @@
     "events": [
     ],
     "data": [
+        {"key":100,"name":"owner","type":"uint256"}
     ]
 }

@@ -16,13 +16,15 @@ use std::env;
 use crate::{TonClient, Ed25519KeyPair, Ed25519Public, TonAddress, ResultOfGetDeployData};
 mod test_piggy;
 
+const ROOT_CONTRACTS_PATH: &str = "src/tests/contracts/";
+
 lazy_static::lazy_static! {
     static ref GIVER_ADDRESS: TonAddress = TonAddress::from_str("0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94").unwrap();
     static ref WALLET_ADDRESS: TonAddress = TonAddress::from_str("0:5b168970a9c63dd5c42a6afbcf706ef652476bb8960a22e1d8a2ad148e60c0ea").unwrap();
 	static ref WALLET_KEYS: Option<Ed25519KeyPair> = get_wallet_keys();
 
-	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("2".to_owned()), 10).unwrap();
-	static ref CONTRACTS_PATH: String = format!("src/tests/contracts/abi_v{}/", *ABI_VERSION);
+	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("1".to_owned()), 10).unwrap();
+	static ref CONTRACTS_PATH: String = format!("{}abi_v{}/", ROOT_CONTRACTS_PATH, *ABI_VERSION);
 	static ref NODE_ADDRESS: String = env::var("TON_NETWORK_ADDRESS")
 		//.unwrap_or("cinet.tonlabs.io".to_owned());
 		.unwrap_or("http://localhost".to_owned());
@@ -32,7 +34,8 @@ lazy_static::lazy_static! {
 	pub static ref PIGGY_BANK_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Piggy.abi.json").unwrap();
     pub static ref WALLET_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "LimitWallet.abi.json").unwrap();
     pub static ref SIMPLE_WALLET_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Wallet.abi.json").unwrap();
-    pub static ref GIVER_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Giver.abi.json").unwrap();
+	pub static ref GIVER_ABI: String = std::fs::read_to_string(ROOT_CONTRACTS_PATH.to_owned() + "Giver.abi.json").unwrap();
+	pub static ref GIVER_WALLET_ABI: String = std::fs::read_to_string(ROOT_CONTRACTS_PATH.to_owned() + "GiverWallet.abi.json").unwrap();
     
     pub static ref SUBSCRIBE_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Subscription.tvc").unwrap();
 	pub static ref PIGGY_BANK_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Piggy.tvc").unwrap();
@@ -174,7 +177,7 @@ fn test_call_aborted_transaction() {
 	match result {
 		TonError(InnerSdkError(err), _) => {
 			assert_eq!(&err.source, "node");
-			assert_eq!(err.code, 102);
+			assert_eq!(err.code, 101);
 			assert_eq!(err.data.is_some(), true);
 			assert_eq!(&err.data.as_ref().unwrap().phase, "computeVm");
 		},
@@ -197,7 +200,7 @@ pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress) {
 	} else {
 		ton.contracts.run(
 			&WALLET_ADDRESS,
-			&SIMPLE_WALLET_ABI,
+			&GIVER_WALLET_ABI,
 			"sendTransaction",
 			None,
 			json!({
