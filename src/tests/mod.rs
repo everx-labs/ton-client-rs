@@ -23,12 +23,12 @@ lazy_static::lazy_static! {
     static ref WALLET_ADDRESS: TonAddress = TonAddress::from_str("0:5b168970a9c63dd5c42a6afbcf706ef652476bb8960a22e1d8a2ad148e60c0ea").unwrap();
 	static ref WALLET_KEYS: Option<Ed25519KeyPair> = get_wallet_keys();
 
-	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("1".to_owned()), 10).unwrap();
+	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("2".to_owned()), 10).unwrap();
 	static ref CONTRACTS_PATH: String = format!("{}abi_v{}/", ROOT_CONTRACTS_PATH, *ABI_VERSION);
 	static ref NODE_ADDRESS: String = env::var("TON_NETWORK_ADDRESS")
 		//.unwrap_or("cinet.tonlabs.io".to_owned());
 		.unwrap_or("http://localhost".to_owned());
-	static ref NODE_SE: bool = env::var("NODE_SE").unwrap_or("true".to_owned()) == "true".to_owned();
+	static ref NODE_SE: bool = env::var("USE_NODE_SE").unwrap_or("true".to_owned()) == "true".to_owned();
 
 	pub static ref SUBSCRIBE_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Subscription.abi.json").unwrap();
 	pub static ref PIGGY_BANK_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Piggy.abi.json").unwrap();
@@ -56,6 +56,12 @@ fn get_wallet_keys() -> Option<Ed25519KeyPair> {
 }
 
 pub fn create_client() -> TonClient {
+	println!("Network address {}", *NODE_ADDRESS);
+	if *NODE_SE {
+		println!("Node SE giver");
+	} else {
+		println!("Real net giver");
+	}
 	TonClient::new_with_base_url(&NODE_ADDRESS).unwrap()
 }
 
