@@ -21,7 +21,7 @@ const ROOT_CONTRACTS_PATH: &str = "src/tests/contracts/";
 
 lazy_static::lazy_static! {
     static ref GIVER_ADDRESS: TonAddress = TonAddress::from_str("0:841288ed3b55d9cdafa806807f02a0ae0c169aa5edfe88a789a6482429756a94").unwrap();
-    static ref WALLET_ADDRESS: TonAddress = TonAddress::from_str("0:5b168970a9c63dd5c42a6afbcf706ef652476bb8960a22e1d8a2ad148e60c0ea").unwrap();
+    static ref WALLET_ADDRESS: TonAddress = TonAddress::from_str("0:2bb4a0e8391e7ea8877f4825064924bd41ce110fce97e939d3323999e1efbb13").unwrap();
 	static ref WALLET_KEYS: Option<Ed25519KeyPair> = get_wallet_keys();
 
 	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("2".to_owned()), 10).unwrap();
