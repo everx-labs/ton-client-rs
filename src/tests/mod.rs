@@ -15,6 +15,7 @@
 use std::env;
 use crate::{TonClient, Ed25519KeyPair, Ed25519Public, TonAddress, ResultOfGetDeployData};
 mod test_piggy;
+mod test_hello;
 
 const ROOT_CONTRACTS_PATH: &str = "src/tests/contracts/";
 
@@ -36,11 +37,12 @@ lazy_static::lazy_static! {
     pub static ref SIMPLE_WALLET_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Wallet.abi.json").unwrap();
 	pub static ref GIVER_ABI: String = std::fs::read_to_string(ROOT_CONTRACTS_PATH.to_owned() + "Giver.abi.json").unwrap();
 	pub static ref GIVER_WALLET_ABI: String = std::fs::read_to_string(ROOT_CONTRACTS_PATH.to_owned() + "GiverWallet.abi.json").unwrap();
-    
-    pub static ref SUBSCRIBE_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Subscription.tvc").unwrap();
+	pub static ref HELLO_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.to_owned() + "Hello.abi.json").unwrap();
+	pub static ref SUBSCRIBE_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Subscription.tvc").unwrap();
 	pub static ref PIGGY_BANK_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Piggy.tvc").unwrap();
 	pub static ref WALLET_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "LimitWallet.tvc").unwrap();
 	pub static ref SIMPLE_WALLET_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Wallet.tvc").unwrap();
+	pub static ref HELLO_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Hello.tvc").unwrap();
 }
 
 fn get_wallet_keys() -> Option<Ed25519KeyPair> {
@@ -51,7 +53,7 @@ fn get_wallet_keys() -> Option<Ed25519KeyPair> {
     let mut keys_file = dirs::home_dir().unwrap();
     keys_file.push("giverKeys.json");
     let keys = std::fs::read_to_string(keys_file).unwrap();
-    
+
     Some(serde_json::from_str(&keys).unwrap())
 }
 
@@ -70,9 +72,9 @@ fn test_contracts() {
     // Deploy Messages
 
     let ton = create_client();
-	
+
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
-	    
+
 	let prepared_wallet_address = ton.contracts.get_deploy_address(
 		&WALLET_ABI,
 		&WALLET_IMAGE,
@@ -141,9 +143,9 @@ fn test_call_aborted_transaction() {
 	use crate::error::{TonError, TonErrorKind::InnerSdkError};
 
     let ton = create_client();
-	
+
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
-	    
+
 	let prepared_wallet_address = ton.contracts.get_deploy_address(
 		&SIMPLE_WALLET_ABI,
 		&SIMPLE_WALLET_IMAGE,
@@ -263,9 +265,9 @@ fn test_init_state() {
     let subscription_address2 = "0:fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321";
 
 	let ton = TonClient::default().unwrap();
-	
+
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
-	    
+
 	let wallet_address1 = ton.contracts.get_deploy_address(
 		&WALLET_ABI,
 		&WALLET_IMAGE,
@@ -275,7 +277,7 @@ fn test_init_state() {
 		}).to_string().into()),
 		&keys.public,
 		0).unwrap();
-		
+
 	let wallet_address2 = ton.contracts.get_deploy_address(
 		&WALLET_ABI,
 		&WALLET_IMAGE,
@@ -296,7 +298,7 @@ fn test_deploy_data() {
 	}
 
 	let ton = TonClient::default().unwrap();
-	
+
 	let key: Ed25519Public = serde_json::from_value(serde_json::Value::from("1111111111111111111111111111111111111111111111111111111111111111")).unwrap();
 	let subscription_addess = "0:2222222222222222222222222222222222222222222222222222222222222222";
 
