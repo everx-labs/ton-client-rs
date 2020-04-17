@@ -1,6 +1,6 @@
 [package]
 name = "ton-client-rs"
-version = "0.20.101"
+version = "0.21.0"
 description = "TON SDK Client Library for Rust"
 authors = ["TON DEV SOLUTIONS LTD <support@tonlabs.io>"]
 edition = "2018"
@@ -25,3 +25,7 @@ error-chain = { version = "^0.12", default-features = false }
 [build-dependencies]
 curl = "0.4.19"
 flate2 = "1.0.4"
+
+[dev-dependencies]
+lazy_static = "1.4.0"
+dirs = "2.0.2"

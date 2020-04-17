@@ -12,6 +12,7 @@
  * limitations under the License.
  */
 
+ /// Error returned from SDK core
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InnerSdkError {
     pub source: String,
@@ -20,6 +21,7 @@ pub struct InnerSdkError {
     pub data: Option<ApiErrorData>,
 }
 
+/// Information about aborted transaction
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ApiErrorData {
     pub transaction_id: String,
@@ -62,7 +64,7 @@ error_chain! {
             display("Can not serialize params for {}. Error {}", func, inner)
         }
         InvalidFunctionResult(func: String, result: String, inner: String){
-            description("Invalid function parameters"),
+            description("Invalid function result"),
             display("Can not deserialize result for {}\nresult JSON: {}\ninner error {}", func, result, inner)
         }
         InvalidFunctionError(func: String, error: String, inner: String){
