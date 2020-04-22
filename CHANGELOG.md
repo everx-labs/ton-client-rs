@@ -1,7 +1,7 @@
 # Release Notes
 All notable changes to this project will be documented in this file.
 
-## 0.21.200 - Apr 8, 2020
+## 0.23.0 - Apr 22, 2020
 ### Featured
 - Message creating and processing functions added: `create_run_message`, `create_deploy_message`,
 `send_message`, `process_message`
