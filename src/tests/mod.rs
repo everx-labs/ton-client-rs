@@ -27,9 +27,9 @@ lazy_static::lazy_static! {
 	static ref CONTRACTS_PATH: String = format!("{}abi_v{}/", ROOT_CONTRACTS_PATH, *ABI_VERSION);
 	static ref NODE_ADDRESS: String = env::var("TON_NETWORK_ADDRESS")
 		//.unwrap_or("cinet.tonlabs.io".to_owned());
-		.unwrap_or("http://localhost".to_owned());
-		//.unwrap_or("net.ton.dev".to_owned());
-	static ref NODE_SE: bool = env::var("USE_NODE_SE").unwrap_or("true".to_owned()) == "true".to_owned();
+		//.unwrap_or("http://localhost".to_owned());
+		.unwrap_or("testnet.ton.dev".to_owned());
+	static ref NODE_SE: bool = env::var("USE_NODE_SE").unwrap_or("false".to_owned()) == "true".to_owned();
 
 	pub static ref SUBSCRIBE_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Subscription.abi.json").unwrap();
 	pub static ref PIGGY_BANK_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Piggy.abi.json").unwrap();
@@ -485,4 +485,29 @@ fn test_messages() {
 		run_message, Some(&WALLET_ABI), Some("sendTransaction"), None).unwrap();
 
 	assert_eq!(run_result.output, json!(null));
+}
+
+
+#[test]
+fn test_create_message() {
+	let ton = create_client();
+
+	// check processing with result decoding
+	let run_message = ton.contracts.create_run_message(
+			&WALLET_ADDRESS,
+			&GIVER_WALLET_ABI,
+			"sendTransaction",
+			None,
+			json!({
+				"dest": WALLET_ADDRESS.to_string(),
+				"value": 100_000_000u64,
+				"bounce": true
+			}).to_string().into(),
+			WALLET_KEYS.as_ref(),
+			None
+	).unwrap();
+
+	std::fs::write("message", &run_message.message_body).unwrap();
+
+	//ton.contracts.process_message(run_message, None, None, None).unwrap();
 }

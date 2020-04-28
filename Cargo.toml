@@ -13,7 +13,7 @@ keywords = ["TON", "blockchain", "cryptography", "network"]
 build = "build.rs"
 
 [package.metadata]
-binaries_version = "0.23.0"
+binaries_version = "0.22.0"
 
 [dependencies]
 hex = "0.3.2"
