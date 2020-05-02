@@ -490,7 +490,7 @@ fn test_messages() {
 
 #[test]
 fn test_create_message() {
-	let ton = create_client();
+	let ton = TonClient::default().unwrap();// create_client();
 
 	// check processing with result decoding
 	let run_message = ton.contracts.create_run_message(

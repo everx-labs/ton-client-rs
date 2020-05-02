@@ -34,7 +34,7 @@ fn main() {
     println!("cargo:rustc-link-search=native={}", out);
     println!("cargo:rustc-link-lib=dylib=ton_client");
 
-    install_binaries();
+    //install_binaries();
 }
 
 fn extract<P: AsRef<Path>, P2: AsRef<Path>>(archive_path: P, extract_to: P2) {
