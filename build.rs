@@ -27,7 +27,7 @@ use flate2::read::GzDecoder;
 use curl::easy::Easy;
 use cargo_toml::Manifest;
 
-const BINARIES_URL: &str = "http://sdkbinaries.tonlabs.io";
+const BINARIES_URL: &str = "http://sdkbinaries-ws.tonlabs.io";
 
 fn main() {
     let out = env::var("OUT_DIR").unwrap();
