@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ### Featured
 - Message creating and processing functions added: `create_run_message`, `create_deploy_message`,
 `send_message`, `process_message`
-
+- Link core as a regular rust dependency.
 
 ## 0.21.0 - Apr 5, 2020
 ### Featured
