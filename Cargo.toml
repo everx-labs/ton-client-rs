@@ -21,7 +21,8 @@ futures = "0.1.26"
 crc16 = "0.4.0"
 error-chain = { version = "^0.12", default-features = false }
 
-ton_client = { git = "https://github.com/tonlabs/TON-SDK.git" }
+#TODO: remove feature disabling after ton-labs-executor repo is used in SDK
+ton_client = { git = "https://github.com/tonlabs/TON-SDK.git", default_features = false, features = ["node_interaction"] }
 
 [dev-dependencies]
 lazy_static = "1.4.0"
