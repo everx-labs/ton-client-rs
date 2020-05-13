@@ -27,7 +27,7 @@ lazy_static::lazy_static! {
 	static ref CONTRACTS_PATH: String = format!("{}abi_v{}/", ROOT_CONTRACTS_PATH, *ABI_VERSION);
 	static ref NODE_ADDRESS: String = env::var("TON_NETWORK_ADDRESS")
 		//.unwrap_or("cinet.tonlabs.io".to_owned());
-		.unwrap_or("http://localhost:8080".to_owned());
+		.unwrap_or("http://localhost".to_owned());
 		//.unwrap_or("net.ton.dev".to_owned());
 	static ref NODE_SE: bool = env::var("USE_NODE_SE").unwrap_or("true".to_owned()) == "true".to_owned();
 
