@@ -38,6 +38,7 @@ lazy_static::lazy_static! {
     pub static ref SIMPLE_WALLET_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Wallet.abi.json").unwrap();
 	pub static ref GIVER_ABI: String = std::fs::read_to_string(ROOT_CONTRACTS_PATH.to_owned() + "Giver.abi.json").unwrap();
 	pub static ref GIVER_WALLET_ABI: String = std::fs::read_to_string(ROOT_CONTRACTS_PATH.to_owned() + "GiverWallet.abi.json").unwrap();
+	pub static ref HELLO_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Hello.abi.json").unwrap();
 
     pub static ref SUBSCRIBE_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Subscription.tvc").unwrap();
 	pub static ref PIGGY_BANK_IMAGE: Vec<u8> = std::fs::read(CONTRACTS_PATH.clone() + "Piggy.tvc").unwrap();
