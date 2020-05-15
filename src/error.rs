@@ -17,7 +17,7 @@ pub struct InnerSdkError {
     pub source: String,
     pub code: isize,
     pub message: String,
-    pub data: Option<ApiErrorData>,
+    pub data: Option<serde_json::Value>,
 }
 
 /// Information about aborted transaction
@@ -77,12 +77,11 @@ error_chain! {
         InnerSdkError(inner: InnerSdkError) {
             description("Inner SDK error"),
             display(
-                "Inner SDK error.\n source: {}\n code: {}\n message: {}\n data.phase: {}\n data.transaction_id: {}",
+                "Inner SDK error.\n source: {}\n code: {}\n message: {}\n data: {:#}\n",
                 inner.source,
                 inner.code,
                 inner.message,
-                if inner.data.is_some() {&inner.data.as_ref().unwrap().phase} else {"null"},
-                if inner.data.is_some() {&inner.data.as_ref().unwrap().transaction_id} else {"null"},
+                inner.data.as_ref().unwrap_or(&"null".into()),
             )
         }
     }

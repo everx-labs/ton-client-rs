@@ -15,94 +15,24 @@ use crate::error::*;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-#[link(name = "ton_client")]
-extern "C" {
-    fn tc_create_context() -> InteropContext;
-    fn tc_destroy_context(context: InteropContext);
-    fn tc_json_request(
-        context: InteropContext,
-        method_name: InteropString,
-        params_json: InteropString,
-    ) -> *const InteropJsonResponseHandle;
-    fn tc_destroy_json_response(
-        response: *const InteropJsonResponseHandle
-    );
-
-    fn tc_read_json_response(
-        response: *const InteropJsonResponseHandle
-    ) -> InteropJsonResponse;
-}
-
 // Types
 
 pub type InteropContext = u32;
-
-#[repr(C)]
-pub(crate) struct InteropString {
-    pub content: *const u8,
-    pub len: u32,
-}
-
-
-#[repr(C)]
-pub(crate) struct InteropJsonResponse {
-    pub result_json: InteropString,
-    pub error_json: InteropString,
-}
-
-#[repr(C)]
-struct InteropJsonResponseHandle {
-    dummy: u32
-}
 
 pub(crate) struct JsonResponse {
     pub result_json: String,
     pub error_json: String,
 }
 
-// Helpers
-
-impl InteropString {
-    pub(crate) fn from(s: &String) -> Self {
-        Self {
-            content: s.as_ptr(),
-            len: s.len() as u32,
-        }
-    }
-
-    pub(crate) fn to_string(&self) -> String {
-        unsafe {
-            let utf8 = std::slice::from_raw_parts(self.content, self.len as usize);
-            String::from_utf8(utf8.to_vec()).unwrap()
-        }
-    }
-
-}
-
-impl InteropJsonResponse {
-    pub(crate) fn to_response(&self) -> JsonResponse {
-        JsonResponse {
-            result_json: self.result_json.to_string(),
-            error_json: self.error_json.to_string(),
-        }
-    }
-}
-
-
-
 pub(crate) struct Interop {}
 
 impl Interop {
     pub fn create_context() -> InteropContext {
-        unsafe {
-            tc_create_context()
-        }
+        ton_client::create_context()
     }
 
     pub fn destroy_context(context: InteropContext) {
-        unsafe {
-            tc_destroy_context(context)
-        }
+        ton_client::destroy_context(context)
     }
 
     fn base_json_request<R: DeserializeOwned>(context: InteropContext, method_name: &str, params_json: String) -> TonResult<R> {
@@ -127,7 +57,7 @@ impl Interop {
     pub fn json_request<P: Serialize, R: DeserializeOwned>(
         context: InteropContext,
         method_name: &str,
-        params: P
+        params: P,
     ) -> TonResult<R> {
         let params_json = serde_json::to_string(&params)
             .map_err(|err| TonError::from(TonErrorKind::InvalidFunctionParams(
@@ -145,19 +75,16 @@ impl Interop {
     fn interop_json_request(
         context: InteropContext,
         method_name: &String,
-        params_json: &String
+        params_json: &String,
     ) -> JsonResponse {
-        unsafe {
-            let response_ptr = tc_json_request(
-                context,
-                InteropString::from(method_name),
-                InteropString::from(params_json)
-            );
-            let interop_response = tc_read_json_response(response_ptr);
-            let response = interop_response.to_response();
-            tc_destroy_json_response(response_ptr);
-            response
+        let response = ton_client::json_sync_request(
+            context,
+            method_name.clone(),
+            params_json.clone(),
+        );
+        JsonResponse {
+            error_json: response.error_json,
+            result_json: response.result_json,
         }
     }
-
 }
