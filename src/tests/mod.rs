@@ -202,7 +202,7 @@ fn test_call_aborted_transaction() {
 			assert_eq!(&err.source, "node");
 			assert_eq!(err.code, 101);
 			assert_eq!(err.data.is_some(), true);
-			assert_eq!(&err.data.as_ref().unwrap().phase, "computeVm");
+			assert_eq!(&err.data.as_ref().unwrap()["phase"], "computeVm");
 		},
 		_ => panic!(),
 	};
