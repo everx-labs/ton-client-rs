@@ -256,7 +256,7 @@ fn test_decode_input() {
 
 	let ton = TonClient::default().unwrap();
 
-	let result = ton.contracts.decode_input_message_body(&SUBSCRIBE_ABI, &body).expect("Couldn't parse body");
+	let result = ton.contracts.decode_input_message_body(&SUBSCRIBE_ABI, &body, false).expect("Couldn't parse body");
 
 	assert_eq!(result.function, "subscribe");
 	assert_eq!(result.output, json!({
