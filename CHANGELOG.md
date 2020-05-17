@@ -1,11 +1,13 @@
 # Release Notes
 All notable changes to this project will be documented in this file.
 
-## 0.23.0 - Apr 22, 2020
+## 0.23.0 - May 18, 2020
 ### Featured
 - Message creating and processing functions added: `create_run_message`, `create_deploy_message`,
 `send_message`, `process_message`
 - Link core as a regular rust dependency.
+- `run_get` function added for running FunC get methods
+- `request_core` function added for calling cor functions which are not yet added to client lib
 
 ## 0.21.0 - Apr 5, 2020
 ### Featured
