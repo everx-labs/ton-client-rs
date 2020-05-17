@@ -13,6 +13,8 @@
 
 use crate::interop::Interop;
 use crate::{TonCrypto, TonContracts, TonQueries, TonResult};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 /// `TonClient` configuration. Contains optional fields with configuration parameters.
 /// 
@@ -96,6 +98,15 @@ impl TonClient {
     /// Set parameters for node interaction
     pub fn setup(&self, config: &TonClientConfig) -> TonResult<()> {
         Interop::json_request(self.context, "setup", config)
+    }
+
+    /// Request core 
+    pub fn request_core<P, R>(&self, function: &str, params: P) -> TonResult<R>
+    where
+        P: Serialize,
+        R: DeserializeOwned
+    {
+        Interop::json_request(self.context, function, params)
     }
 }
 
