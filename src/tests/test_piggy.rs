@@ -112,7 +112,7 @@ fn test_piggy() {
         None,
         json!({}).to_string().into(), None).unwrap();
 
-    println!("getGoal answer {}", get_goal_answer);
+    println!("getGoal answer {:#?}", get_goal_answer);
 
     let prepared_address = ton.contracts.get_deploy_address(
         &SUBSCRIBE_ABI,
@@ -218,5 +218,5 @@ fn test_piggy() {
         Some(&keypair)
     ).unwrap();
 
-    println!("getSubscription answer {}", subscriptions);
+    println!("getSubscription answer {:#?}", subscriptions);
 }

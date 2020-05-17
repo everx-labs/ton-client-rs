@@ -15,6 +15,7 @@ use std::env;
 use crate::{TonClient, Ed25519KeyPair, Ed25519Public, TonAddress, ResultOfGetDeployData};
 mod test_piggy;
 mod test_hello;
+mod test_run_get;
 
 const ROOT_CONTRACTS_PATH: &str = "src/tests/contracts/";
 
@@ -149,7 +150,7 @@ fn test_contracts() {
 			"value": 123
 		}).to_string().into(),
         Some(&keys)).unwrap();
-    println!("{}", result)
+    println!("{:#?}", result)
 }
 
 #[test]
