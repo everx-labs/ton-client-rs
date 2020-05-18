@@ -169,6 +169,27 @@ pub(crate) struct ParamsOfProcessMessage{
     pub try_index: Option<u8>,
 }
 
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
+pub(crate) struct RunGetAccount {
+    #[serde(rename(serialize = "codeBase64"))]
+    pub code: Option<String>,
+    #[serde(rename(serialize = "dataBase64"))]
+    pub data: Option<String>,
+    #[serde(rename(serialize = "address"))]
+    pub id: Option<String>,
+    pub balance: Option<String>,
+    pub last_paid: Option<u32>,
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParamsOfRunGet {
+    #[serde(flatten)]
+    pub account: RunGetAccount,
+    pub function_name: String,
+    pub input: Option<Value>,
+}
+
 /// Parameters to be passed into contract function
 pub enum RunParameters {
      Json(String),
@@ -283,7 +304,7 @@ impl TonContracts {
         header: Option<RunParameters>,
         input: RunParameters,
         keys: Option<&Ed25519KeyPair>,
-    ) -> TonResult<Value> {
+    ) -> TonResult<ResultOfRun> {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
@@ -308,7 +329,7 @@ impl TonContracts {
         header: Option<RunParameters>,
         input: RunParameters,
         keys: Option<&Ed25519KeyPair>,
-    ) -> TonResult<Value> {
+    ) -> TonResult<ResultOfRun> {
         let abi = serde_json::from_str(abi)
            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
@@ -460,5 +481,39 @@ impl TonContracts {
                 message: message.into()
             }
         )
+    }
+
+    /// Run the contract get method locally
+    pub fn run_get(
+        &self,
+        address: Option<&TonAddress>,
+        account: Option<&str>,
+        function_name: &str,
+        input: Option<RunParameters>,
+    ) -> TonResult<ResultOfRun> {
+        let mut account: RunGetAccount = serde_json::from_str(account.unwrap_or("{}"))
+            .map_err(|_| TonErrorKind::InvalidArg("account".to_owned()))?;
+        if let Some(addr) = address {
+            account.id = Some(addr.to_string());
+        }
+        Interop::json_request(self.context, "tvm.get", ParamsOfRunGet {
+            account,
+            function_name: function_name.to_string(),
+            input: Self::option_params_to_value(input)?,
+        })
+    }
+
+    /// Convert list in `cons` representation to `Vec`
+    pub fn cons_to_vec(&self, cons: Value) -> TonResult<Value> {
+        let mut result = vec![];
+        let mut item = cons;
+        while !item.is_null() {
+            if item.as_array().unwrap_or(&vec![]).len() != 2 {
+                return Err(TonErrorKind::InvalidArg("Invalid cons".to_owned()).into());
+            }
+            result.push(item[0].take());
+            item = item[1].take();
+        }
+        Ok(result.into())
     }
 }
