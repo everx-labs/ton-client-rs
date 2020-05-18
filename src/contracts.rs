@@ -328,7 +328,7 @@ impl TonContracts {
         })
     }
 
-    /// Decodes external inbound message body with encoded contract call parameters
+    /// Decodes input message body with encoded contract call parameters
     pub fn decode_input_message_body(
         &self,
         abi: &str,
