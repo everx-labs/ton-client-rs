@@ -149,6 +149,7 @@ impl EncodedMessage {
 pub(crate) struct ParamsOfDecodeMessageBody {
     pub abi: serde_json::Value,
     pub body_base64: String,
+    pub internal: bool,
 }
 
 /// Result of `decode_input_message_body` and `decode_output_message_body` functions calls.
@@ -348,11 +349,12 @@ impl TonContracts {
         })
     }
 
-    /// Decodes external inbound message body with encoded contract call parameters
+    /// Decodes input message body with encoded contract call parameters
     pub fn decode_input_message_body(
         &self,
         abi: &str,
-        body: &[u8]
+        body: &[u8],
+        internal: bool,
     ) -> TonResult<ResultOfDecodeMessageBody> {
         let abi = serde_json::from_str(abi)
            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
@@ -362,7 +364,8 @@ impl TonContracts {
             "contracts.run.unknown.input",
             ParamsOfDecodeMessageBody {
                 abi,
-                body_base64: base64::encode(body)
+                body_base64: base64::encode(body),
+                internal,
         })
     }
 
@@ -380,7 +383,8 @@ impl TonContracts {
             "contracts.run.unknown.output",
             ParamsOfDecodeMessageBody {
                 abi,
-                body_base64: base64::encode(body)
+                body_base64: base64::encode(body),
+                internal: false,
         })
     }
 
