@@ -14,14 +14,14 @@ struct NaclNonce(pub [u8; 24]);
 #[derive(Clone)]
 struct NaclSignSecret(pub [u8; 64]);
 /// Ed25519 public key
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Ed25519Public(pub [u8; 32]);
 /// Ed25519 secret key
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Ed25519Secret(pub [u8; 32]);
 
 /// Ed25519 key pair
-#[derive(Default, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Ed25519KeyPair {
     pub public: Ed25519Public,
     pub secret: Ed25519Secret,
