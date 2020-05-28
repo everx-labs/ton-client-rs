@@ -34,7 +34,7 @@ fn test_piggy() {
         &keypair.public,
         0).unwrap();
 
-    super::get_grams_from_giver(&ton, &prepared_address);
+    super::get_grams_from_giver(&ton, &prepared_address, None);
 
     let wallet_address = ton.contracts.deploy(
         &WALLET_ABI,
@@ -54,7 +54,7 @@ fn test_piggy() {
         &keypair.public,
         0).unwrap();
 
-    super::get_grams_from_giver(&ton, &prepared_address);
+    super::get_grams_from_giver(&ton, &prepared_address, None);
 
     let piggy_bank_address = ton.contracts.deploy(
         &PIGGY_BANK_ABI,
@@ -121,7 +121,7 @@ fn test_piggy() {
         &keypair.public,
         0).unwrap();
 
-    super::get_grams_from_giver(&ton, &prepared_address);
+    super::get_grams_from_giver(&ton, &prepared_address, None);
 
     let subscription_constructor_params = json!({
         "wallet" : wallet_address.to_string()

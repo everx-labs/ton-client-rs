@@ -28,7 +28,7 @@ fn test_hello() {
         &keypair.public,
         0).expect("Couldn't create key pair");
 
-    super::get_grams_from_giver(&ton_client, &prepared_address);
+    super::get_grams_from_giver(&ton_client, &prepared_address, None);
 
     let hello_address = ton_client.contracts.deploy(
         &HELLO_ABI,

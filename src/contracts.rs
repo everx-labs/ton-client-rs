@@ -117,7 +117,7 @@ pub(crate) struct EncodedMessageCore {
 }
 
 /// Message ready for sending to node
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct EncodedMessage {
     pub message_id: String,
     pub message_body: Vec<u8>,
@@ -188,6 +188,25 @@ pub(crate) struct ParamsOfRunGet {
     pub account: RunGetAccount,
     pub function_name: String,
     pub input: Option<Value>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParamsOfResolveError {
+    pub address: TonAddress,
+    pub account: Option<serde_json::Value>,
+    pub message_base64: String,
+    pub time: u32,
+    pub main_error: InnerSdkError,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParamsOfProcessTrtansaction{
+    pub transaction: serde_json::Value,
+    pub abi: Option<serde_json::Value>,
+    pub function_name: Option<String>,
+    pub address: TonAddress,
 }
 
 /// Parameters to be passed into contract function
@@ -515,5 +534,50 @@ impl TonContracts {
             item = item[1].take();
         }
         Ok(result.into())
+    }
+
+    /// Investigate message processing error
+    pub fn resolve_error(
+        &self,
+        address: &TonAddress,
+        account: Option<&str>,
+        message: EncodedMessage,
+        send_time: u32,
+        error: InnerSdkError
+    ) -> TonResult<ResultOfRun> {
+        let account = account.map(|acc_str| {
+                serde_json::from_str(acc_str)
+                    .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))
+        }).transpose()?;
+
+        Interop::json_request(self.context, "contracts.resolve.error", ParamsOfResolveError {
+            address: address.clone(),
+            account: account,
+            message_base64: base64::encode(&message.message_body),
+            time: send_time,
+            main_error: error,
+        })
+    }
+
+    /// Process recieved transaction to check errors and get output
+    pub fn process_transaction(
+        &self,
+        address: &TonAddress,
+        transaction: &str,
+        abi: Option<&str>,
+        function_name: Option<&str>,
+    ) -> TonResult<ResultOfRun> {
+        let transaction = serde_json::from_str(transaction)
+            .map_err(|_| TonErrorKind::InvalidArg(transaction.to_owned()))?;
+        let abi = abi.map(|abi| serde_json::from_str(abi)
+            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))
+        ).transpose()?;
+
+        Interop::json_request(self.context, "contracts.process.transaction", ParamsOfProcessTrtansaction {
+            address: address.clone(),
+            abi,
+            transaction,
+            function_name: function_name.map(|val| val.to_owned())
+        })
     }
 }
