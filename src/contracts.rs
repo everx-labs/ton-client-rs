@@ -30,25 +30,20 @@ pub(crate) struct ParamsOfDeploy {
 }
 
 /// Result of `deploy` function running. Contains address of the contract
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ResultOfDeploy {
     pub address: TonAddress,
-    pub already_deployed: bool, 
+    pub already_deployed: bool,
+    pub fees: Option<TransactionFees>
 }
 
 /// Result of `create_deploy_message` function. Contains message and future address of the contract
-#[derive(Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct ResultOfCreateDeployMessage {
     pub address: TonAddress,
-    pub message: EncodedMessage,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub(crate) struct ResultOfCreateDeployMessageCore {
-    pub address: TonAddress,
     #[serde(flatten)]
-    pub message: EncodedMessageCore,
+    pub message: EncodedMessage,
 }
 
 #[derive(Serialize, Debug, PartialEq)]
@@ -61,17 +56,10 @@ pub(crate) struct ParamsOfGetDeployData {
     pub workchain_id: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ResultOfGetDeployDataCore {
-    pub image_base64: Option<String>,
-    pub address: Option<String>,
-    pub data_base64: String,
-}
-
-#[derive(Debug, PartialEq)]
 /// Result of `get_deploy_data` function call. Contains updated contract image, deploy address and
 /// stored data
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(try_from = "crate::json_helper::ResultOfGetDeployDataCore")]
 pub struct ResultOfGetDeployData {
     pub image: Option<Vec<u8>>,
     pub address: Option<TonAddress>,
@@ -103,45 +91,31 @@ pub(crate) struct ParamsOfLocalRun {
 }
 
 /// Result of `run` function running. Contains parameters returned by contract function
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct ResultOfRun {
-    pub output: Value
+    pub output: Value,
+    pub fees: TransactionFees
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct EncodedMessageCore {
-    pub message_id: String,
-    pub message_body_base64: String,
-    pub expire: Option<u32>,
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(try_from = "crate::json_helper::TransactionFeesCore")]
+pub struct TransactionFees {
+    pub in_msg_fwd_fee: u64,
+    pub storage_fee: u64,
+    pub gas_fee: u64,
+    pub out_msgs_fwd_fee: u64,
+    pub total_account_fees: u64,
+    pub total_output: u64
 }
 
 /// Message ready for sending to node
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(try_from = "crate::json_helper::EncodedMessageCore")]
+#[serde(into = "crate::json_helper::EncodedMessageCore")]
 pub struct EncodedMessage {
     pub message_id: String,
     pub message_body: Vec<u8>,
     pub expire: Option<u32>,
-}
-
-impl Into<EncodedMessageCore> for EncodedMessage {
-    fn into(self) -> EncodedMessageCore {
-        EncodedMessageCore {
-            message_id: self.message_id,
-            message_body_base64: base64::encode(&self.message_body),
-            expire: self.expire
-        }
-    }
-}
-
-impl EncodedMessage {
-    pub(crate) fn from_core(core_message: EncodedMessageCore) -> TonResult<Self> {
-        Ok(EncodedMessage {
-            message_id: core_message.message_id,
-            message_body: base64::decode(&core_message.message_body_base64)?,
-            expire: core_message.expire
-        })
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -165,7 +139,7 @@ pub struct ResultOfDecodeMessageBody {
 pub(crate) struct ParamsOfProcessMessage{
     pub abi: Option<serde_json::Value>,
     pub function_name: Option<String>,
-    pub message: EncodedMessageCore,
+    pub message: EncodedMessage,
     pub try_index: Option<u8>,
 }
 
@@ -258,7 +232,7 @@ impl TonContracts {
             serde_json::from_str(val).map_err(|_| TonErrorKind::InvalidArg(val.to_owned()))
         }).transpose()?;
 
-        let core_result: ResultOfGetDeployDataCore = Interop::json_request(
+        Interop::json_request(
             self.context,
             "contracts.deploy.data",
             ParamsOfGetDeployData {
@@ -267,13 +241,7 @@ impl TonContracts {
                 init_params: Self::option_params_to_value(init_params)?,
                 public_key_hex: public_key.clone(),
                 workchain_id: workchain_id,
-            })?;
-
-        Ok(ResultOfGetDeployData {
-            address: core_result.address.map(|val| TonAddress::from_str(&val)).transpose()?,
-            image: core_result.image_base64.map(|val| base64::decode(&val).into()).transpose()?,
-            data: base64::decode(&core_result.data_base64)?
-        })
+            })
     }
 
     fn params_to_value(params: RunParameters) -> TonResult<Value> {
@@ -421,7 +389,7 @@ impl TonContracts {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
-        let result: EncodedMessageCore = Interop::json_request(self.context, "contracts.run.message", ParamsOfRun {
+        Interop::json_request(self.context, "contracts.run.message", ParamsOfRun {
             address: address.clone(),
             abi,
             function_name: function_name.to_string(),
@@ -429,9 +397,7 @@ impl TonContracts {
             input: Self::params_to_value(input)?,
             key_pair: keys.cloned(),
             try_index
-        })?;
-
-        EncodedMessage::from_core(result)
+        })
     }
 
     /// Create message to deploy contract
@@ -449,7 +415,7 @@ impl TonContracts {
         let abi = serde_json::from_str(abi)
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
-        let result: ResultOfCreateDeployMessageCore = Interop::json_request(
+        Interop::json_request(
             self.context,
             "contracts.deploy.message",
             ParamsOfDeploy {
@@ -461,20 +427,15 @@ impl TonContracts {
                 key_pair: keys.clone(),
                 workchain_id: workchain_id,
                 try_index
-        })?;
-
-        Ok(ResultOfCreateDeployMessage {
-            address: result.address,
-            message: EncodedMessage::from_core(result.message)?
         })
     }
 
     /// Send message to node without waiting for processing result
     pub fn send_message(&self, message: EncodedMessage) -> TonResult<()> {
-        Interop::json_request::<EncodedMessageCore, ()>(
+        Interop::json_request(
             self.context,
             "contracts.send.message",
-            message.into()
+            message
         )
     }
 
