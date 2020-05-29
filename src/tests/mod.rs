@@ -203,8 +203,9 @@ fn test_call_aborted_transaction() {
 	match result {
 		TonError(InnerSdkError(err), _) => {
 			assert_eq!(&err.source, "node");
-			assert_eq!(err.code, 101);
+			assert_eq!(err.code, 3025);
 			assert_eq!(&err.data["phase"], "computeVm");
+			assert_eq!(&err.data["exit_code"], 101);
 		},
 		_ => panic!(),
 	};

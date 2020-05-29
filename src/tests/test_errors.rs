@@ -74,10 +74,16 @@ fn test_errors() {
         &HELLO_ABI, &HELLO_IMAGE, None, json!({}).to_string().into(), None, &keypair, 0, None
     ).unwrap();
 
-    let main_code = if *ABI_VERSION == 2 {
+    let real_main_code = if *ABI_VERSION == 2 {
         1006    // message expired
     } else {
-        1003    // transaction wait timeout
+        1012    // transaction wait timeout
+    };
+
+    let (main_code, extended_code) = if *NODE_SE {
+        (3025, None)                    // 3025 - tvm execution failed
+    } else {
+        (real_main_code, Some(1016))    // 1016 - low balance
     };
 
     let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as u32;
@@ -85,7 +91,7 @@ fn test_errors() {
     // process message with error resolving
     let result = ton_client.contracts.process_message(msg.message.clone(), None, None, None).unwrap_err();
 
-    check_error(&result, main_code, Some(1016)); // low balance
+    check_error(&result, main_code, extended_code); // low balance
 
     let account = ton_client.queries.accounts.query(
         &json!({"id": { "eq": hello_address.to_string() }}).to_string(),
@@ -99,7 +105,7 @@ fn test_errors() {
         &hello_address, Some(&account.to_string()), msg.message, time, error,
     ).unwrap_err();
 
-    check_error(&result, main_code, Some(1016)); // low balance
+    check_error(&result, main_code, Some(1016)); // 1016 - low balance
 
     // run before deploy
     super::get_grams_from_giver(&std_ton_client, &hello_address, None);
@@ -107,7 +113,13 @@ fn test_errors() {
         &hello_address, &HELLO_ABI, "touch", None, json!({}).to_string().into(), Some(&keypair)
     ).unwrap_err();
 
-    check_error(&result, main_code, Some(1015)); // code missing
+    let (main_code, extended_code) = if *NODE_SE {
+        (1015, None)                    // 1015 - code missing
+    } else {
+        (real_main_code, Some(1015))    // 1015 - code missing
+    };
+
+    check_error(&result, main_code, extended_code);
 
     // normal deploy
     std_ton_client.contracts.deploy(
@@ -126,7 +138,13 @@ fn test_errors() {
         None
     ).unwrap_err();
 
-    check_error(&result, main_code, Some(3025)); // contract execution failed
+    let (main_code, extended_code) = if *NODE_SE {
+        (3025, None)                    // 3025 - tvm execution failed
+    } else {
+        (real_main_code, Some(3025))    // 3025 - low balance
+    };
+
+    check_error(&result, main_code, extended_code);
 
     std_ton_client.contracts.run(
         &hello_address,
@@ -143,5 +161,11 @@ fn test_errors() {
         &hello_address, &HELLO_ABI, "touch", None, json!({}).to_string().into(), Some(&keypair)
     ).unwrap_err();
 
-    check_error(&result, main_code, Some(1016)); // low balance
+    let (main_code, extended_code) = if *NODE_SE {
+        (1016, None)                    // 1016 - low balance
+    } else {
+        (real_main_code, Some(1016))    // 1016 - low balance
+    };
+
+    check_error(&result, main_code, extended_code);
 }
