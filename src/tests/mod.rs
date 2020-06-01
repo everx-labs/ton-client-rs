@@ -28,10 +28,10 @@ lazy_static::lazy_static! {
 	static ref ABI_VERSION: u8 = u8::from_str_radix(&env::var("ABI_VERSION").unwrap_or("2".to_owned()), 10).unwrap();
 	static ref CONTRACTS_PATH: String = format!("{}abi_v{}/", ROOT_CONTRACTS_PATH, *ABI_VERSION);
 	static ref NODE_ADDRESS: String = env::var("TON_NETWORK_ADDRESS")
-		.unwrap_or("cinet.tonlabs.io".to_owned());
-		//.unwrap_or("http://localhost".to_owned());
+		//.unwrap_or("cinet.tonlabs.io".to_owned());
+		.unwrap_or("http://localhost".to_owned());
 		//.unwrap_or("net.ton.dev".to_owned());
-	static ref NODE_SE: bool = env::var("USE_NODE_SE").unwrap_or("false".to_owned()) == "true".to_owned();
+	static ref NODE_SE: bool = env::var("USE_NODE_SE").unwrap_or("true".to_owned()) == "true".to_owned();
 
 	pub static ref SUBSCRIBE_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Subscription.abi.json").unwrap();
 	pub static ref PIGGY_BANK_ABI: String = std::fs::read_to_string(CONTRACTS_PATH.clone() + "Piggy.abi.json").unwrap();
@@ -137,7 +137,11 @@ fn test_contracts() {
 		let result = ton.contracts.process_message(message, None, None, None);
 
 		match result.unwrap_err().0 {
-			crate::error::TonErrorKind::InnerSdkError(err) => assert_eq!(err.code, 1006),
+			crate::error::TonErrorKind::InnerSdkError(err) => {
+				println!("{:#?}", err);
+				assert_eq!(err.code, 3025); // 3025 - tvm execution failed
+				assert_eq!(&err.data["original_error"]["code"], 1006); // 1006 - message expired
+			}
 			_ => panic!("InnerSdkError expected")
 		}
 	};
@@ -424,8 +428,15 @@ fn test_messages() {
 		0,
 		None).unwrap();
 
-	ton.contracts.process_message(
+	let result = ton.contracts.run_local_msg(
+		&address, None, message.message.clone(), None, None, None, true).unwrap();
+
+	println!("{:#?}", result.fees.unwrap());
+
+	let result = ton.contracts.process_message(
 		message.message, None, None, None).unwrap();
+
+	println!("{:#?}", result.fees);
 
 	// check processing with result decoding
 	let run_message = ton.contracts.create_run_message(

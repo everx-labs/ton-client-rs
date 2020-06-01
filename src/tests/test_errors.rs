@@ -17,19 +17,21 @@ use crate::error::{TonError, TonErrorKind, InnerSdkError};
 fn extract_inner_error(error: &TonError) -> InnerSdkError {
     match error {
 		TonError(TonErrorKind::InnerSdkError(err), _) => {
-            println!("{:#?}", err);
+            //println!("{:#?}", err);
 			err.clone()
 		},
 		_ => panic!(),
 	}
 }
 
-fn check_error(error: &TonError, main_code: isize, extended_code: Option<isize>) {
+fn check_error(error: &TonError, main_code: isize, original_code: Option<isize>) {
     let err = extract_inner_error(error);
     
     assert_eq!(err.code, main_code);
-    if let Some(code) = extended_code {
-        assert_eq!(&err.data["extended_code"], code);
+    if let Some(code) = original_code {
+        assert_eq!(&err.data["original_error"]["code"], code);
+    } else {
+        assert!(err.data["original_error"]["code"].is_null())
     }
 }
 
@@ -40,7 +42,7 @@ fn test_errors() {
         message_retries_count: Some(0),
         message_expiration_timeout: Some(2_000),
         message_expiration_timeout_grow_factor: None,
-        message_processing_timeout: None,
+        message_processing_timeout: Some(10_000),
         message_processing_timeout_grow_factor: None,
         wait_for_timeout: None,
         access_key: None,
@@ -74,16 +76,10 @@ fn test_errors() {
         &HELLO_ABI, &HELLO_IMAGE, None, json!({}).to_string().into(), None, &keypair, 0, None
     ).unwrap();
 
-    let real_main_code = if *ABI_VERSION == 2 {
+    let real_original_code = if *ABI_VERSION == 2 {
         1006    // message expired
     } else {
         1012    // transaction wait timeout
-    };
-
-    let (main_code, extended_code) = if *NODE_SE {
-        (3025, None)                    // 3025 - tvm execution failed
-    } else {
-        (real_main_code, Some(1016))    // 1016 - low balance
     };
 
     let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as u32;
@@ -91,7 +87,11 @@ fn test_errors() {
     // process message with error resolving
     let result = ton_client.contracts.process_message(msg.message.clone(), None, None, None).unwrap_err();
 
-    check_error(&result, main_code, extended_code); // low balance
+    if *NODE_SE {
+        check_error(&result, 3025, None); // 3025 - tvm execution failed                 
+    } else {
+        check_error(&result, 1016, Some(real_original_code))    // 1016 - low balance
+    };
 
     let account = ton_client.queries.accounts.query(
         &json!({"id": { "eq": hello_address.to_string() }}).to_string(),
@@ -101,11 +101,22 @@ fn test_errors() {
 
     // manual resolving
     let error = extract_inner_error(&result);
+    let code = error.code;
     let result = ton_client.contracts.resolve_error(
-        &hello_address, Some(&account.to_string()), msg.message, time, error,
+        &hello_address,
+        Some(&account.to_string()),
+        msg.message,
+        time,
+        error,
     ).unwrap_err();
 
-    check_error(&result, main_code, Some(1016)); // 1016 - low balance
+    check_error(&result, 1016, Some(code));    // 1016 - low balance
+
+    // ABI version 1 messages don't expire so previous deploy message can be processed after
+    // increasing balance. Need to wait until message will be rejected by all validators
+    if *ABI_VERSION == 1 && !*NODE_SE{
+        std::thread::sleep(std::time::Duration::from_secs(50));
+    }
 
     // run before deploy
     super::get_grams_from_giver(&std_ton_client, &hello_address, None);
@@ -113,13 +124,11 @@ fn test_errors() {
         &hello_address, &HELLO_ABI, "touch", None, json!({}).to_string().into(), Some(&keypair)
     ).unwrap_err();
 
-    let (main_code, extended_code) = if *NODE_SE {
-        (1015, None)                    // 1015 - code missing
+    if *NODE_SE {
+        check_error(&result, 1015, None) // 1015 - code missing              
     } else {
-        (real_main_code, Some(1015))    // 1015 - code missing
+        check_error(&result, 1015, Some(real_original_code)) // 1015 - code missing
     };
-
-    check_error(&result, main_code, extended_code);
 
     // normal deploy
     std_ton_client.contracts.deploy(
@@ -138,13 +147,11 @@ fn test_errors() {
         None
     ).unwrap_err();
 
-    let (main_code, extended_code) = if *NODE_SE {
-        (3025, None)                    // 3025 - tvm execution failed
+    if *NODE_SE {
+        check_error(&result, 3025, None) // 3025 - tvm execution failed
     } else {
-        (real_main_code, Some(3025))    // 3025 - low balance
+        check_error(&result, 3025, Some(real_original_code)) // 3025 - tvm execution failed
     };
-
-    check_error(&result, main_code, extended_code);
 
     std_ton_client.contracts.run(
         &hello_address,
@@ -161,11 +168,9 @@ fn test_errors() {
         &hello_address, &HELLO_ABI, "touch", None, json!({}).to_string().into(), Some(&keypair)
     ).unwrap_err();
 
-    let (main_code, extended_code) = if *NODE_SE {
-        (1016, None)                    // 1016 - low balance
+    if *NODE_SE {
+        check_error(&result, 1016, None) // 1016 - low balance
     } else {
-        (real_main_code, Some(1016))    // 1016 - low balance
-    };
-
-    check_error(&result, main_code, extended_code);
+        check_error(&result, 1016, Some(real_original_code)) // 1016 - low balance
+    }
 }

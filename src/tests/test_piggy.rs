@@ -110,7 +110,13 @@ fn test_piggy() {
         &PIGGY_BANK_ABI,
         "getGoal",
         None,
-        json!({}).to_string().into(), None).unwrap();
+        json!({}).to_string().into(),
+        None,
+        None,
+        false,
+    ).unwrap();
+
+    assert!(get_goal_answer.fees.is_none());
 
     println!("getGoal answer {:#?}", get_goal_answer);
 
@@ -191,6 +197,27 @@ fn test_piggy() {
         }));
 
     let subscr_id_str = hex::encode(&[0x22; 32]);
+
+    let result = ton.contracts.run_local(
+        &subscripition_address,
+        None,
+        &SUBSCRIBE_ABI,
+        "subscribe",
+        None,
+        json!({
+            "subscriptionId" : format!("0x{}", subscr_id_str),
+            "pubkey" : format!("0x{}", pubkey_str),
+            "to": piggy_bank_address.to_string(),
+            "value" : 5000000000 as i64,
+            "period" : 86400
+        }).to_string().into(),
+        Some(&keypair),
+        None,
+        true
+    ).unwrap();
+
+    assert!(result.fees.is_some());
+
     let _subscribe_answer = ton.contracts.run(
         &subscripition_address,
         &SUBSCRIBE_ABI,
@@ -215,7 +242,9 @@ fn test_piggy() {
         json!({
             "subscriptionId" : format!("0x{}", subscr_id_str),
         }).to_string().into(),
-        Some(&keypair)
+        Some(&keypair),
+        None,
+        false,
     ).unwrap();
 
     println!("getSubscription answer {:#?}", subscriptions);

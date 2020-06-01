@@ -56,7 +56,11 @@ fn test_hello() {
         &HELLO_ABI,
         "sayHello",
         None,
-        json!({}).to_string().into(), None).expect("Couldn't runLocal sayHello");
+        json!({}).to_string().into(),
+        None,
+        None,
+        false,
+    ).expect("Couldn't runLocal sayHello");
 
     println!("Hello contract was responded to sayHello: {:#?}", response);
 

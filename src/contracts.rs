@@ -88,6 +88,20 @@ pub(crate) struct ParamsOfLocalRun {
     pub header: Option<serde_json::Value>,
     pub input: serde_json::Value,
     pub key_pair: Option<Ed25519KeyPair>,
+    pub full_run: bool,
+    pub time: Option<u32>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParamsOfLocalRunWithMsg {
+    pub address: TonAddress,
+    pub account: Option<serde_json::Value>,
+    pub abi: Option<serde_json::Value>,
+    pub function_name: Option<String>,
+    pub message_base64: String,
+    pub full_run: bool,
+    pub time: Option<u32>,
 }
 
 /// Result of `run` function running. Contains parameters returned by contract function
@@ -95,6 +109,13 @@ pub(crate) struct ParamsOfLocalRun {
 pub struct ResultOfRun {
     pub output: Value,
     pub fees: TransactionFees
+}
+
+/// Result of `run` function running. Contains parameters returned by contract function
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct ResultOfLocalRun {
+    pub output: Value,
+    pub fees: Option<TransactionFees>
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -176,7 +197,7 @@ pub(crate) struct ParamsOfResolveError {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ParamsOfProcessTrtansaction{
+pub(crate) struct ParamsOfProcessTransaction{
     pub transaction: serde_json::Value,
     pub abi: Option<serde_json::Value>,
     pub function_name: Option<String>,
@@ -316,7 +337,9 @@ impl TonContracts {
         header: Option<RunParameters>,
         input: RunParameters,
         keys: Option<&Ed25519KeyPair>,
-    ) -> TonResult<ResultOfRun> {
+        time: Option<u32>,
+        emulate_transaction: bool
+    ) -> TonResult<ResultOfLocalRun> {
         let abi = serde_json::from_str(abi)
            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
 
@@ -333,6 +356,39 @@ impl TonContracts {
             header: Self::option_params_to_value(header)?,
             input: Self::params_to_value(input)?,
             key_pair: keys.cloned(),
+            time,
+            full_run: emulate_transaction
+        })
+    }
+
+        /// Run the contract function with given parameters locally
+    pub fn run_local_msg(
+        &self,
+        address: &TonAddress,
+        account: Option<&str>,
+        message: EncodedMessage,
+        abi: Option<&str>,
+        function_name: Option<&str>,
+        time: Option<u32>,
+        emulate_transaction: bool,
+    ) -> TonResult<ResultOfLocalRun> {
+        let abi = abi.map(|abi| serde_json::from_str(abi)
+                .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))
+        ).transpose()?;
+
+        let account = account.map(|acc_str| {
+                serde_json::from_str(acc_str)
+                    .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))
+        }).transpose()?;
+
+        Interop::json_request(self.context, "contracts.run.local.msg", ParamsOfLocalRunWithMsg {
+            address: address.clone(),
+            account,
+            message_base64: base64::encode(&message.message_body),
+            abi,
+            function_name: function_name.map(|val| val.to_string()),
+            time,
+            full_run: emulate_transaction
         })
     }
 
@@ -470,7 +526,7 @@ impl TonContracts {
         account: Option<&str>,
         function_name: &str,
         input: Option<RunParameters>,
-    ) -> TonResult<ResultOfRun> {
+    ) -> TonResult<ResultOfLocalRun> {
         let mut account: RunGetAccount = serde_json::from_str(account.unwrap_or("{}"))
             .map_err(|_| TonErrorKind::InvalidArg("account".to_owned()))?;
         if let Some(addr) = address {
@@ -534,7 +590,7 @@ impl TonContracts {
             .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))
         ).transpose()?;
 
-        Interop::json_request(self.context, "contracts.process.transaction", ParamsOfProcessTrtansaction {
+        Interop::json_request(self.context, "contracts.process.transaction", ParamsOfProcessTransaction {
             address: address.clone(),
             abi,
             transaction,
