@@ -17,7 +17,7 @@ pub struct InnerSdkError {
     pub source: String,
     pub code: isize,
     pub message: String,
-    pub data: serde_json::Value,
+    pub data: Option<serde_json::Value>,
 }
 
 /// Information about aborted transaction
@@ -81,7 +81,7 @@ error_chain! {
                 inner.source,
                 inner.code,
                 inner.message,
-                inner.data,
+                inner.data.as_ref().unwrap_or(&"null".into()),
             )
         }
     }

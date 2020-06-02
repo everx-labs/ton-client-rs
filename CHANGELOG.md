@@ -1,24 +1,11 @@
 # Release Notes
 All notable changes to this project will be documented in this file.
 
-## 0.24.0 - Jun 01, 2020
-### Featured
-- Error resolving after message rejection
-- All transaction producing functions return transaction fees
-
-### New
-- `run_local_msg` function for processing given message locally
-- `run_local` funtion now take flag `emulate_transaction` to run contract in transaction executor
-which processes all transaction phases to emulate processing on node. Transaction fees are returned
-if this flag is `true`.
-
-## 0.23.0 - May 18, 2020
+## 0.23.0 - Apr 22, 2020
 ### Featured
 - Message creating and processing functions added: `create_run_message`, `create_deploy_message`,
 `send_message`, `process_message`
 - Link core as a regular rust dependency.
-- `run_get` function added for running FunC get methods
-- `request_core` function added for calling cor functions which are not yet added to client lib
 
 ## 0.21.0 - Apr 5, 2020
 ### Featured

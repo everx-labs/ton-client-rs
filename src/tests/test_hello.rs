@@ -2,7 +2,8 @@
  * Copyright 2018-2020 TON DEV SOLUTIONS LTD.
  *
  * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
- * this file except in compliance with the License.
+ * this file except in compliance with the License.  You may obtain a copy of the
+ * License at: https://ton.dev/licenses
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,7 +29,7 @@ fn test_hello() {
         &keypair.public,
         0).expect("Couldn't create key pair");
 
-    super::get_grams_from_giver(&ton_client, &prepared_address, None);
+    super::get_grams_from_giver(&ton_client, &prepared_address);
 
     let hello_address = ton_client.contracts.deploy(
         &HELLO_ABI,
@@ -56,12 +57,8 @@ fn test_hello() {
         &HELLO_ABI,
         "sayHello",
         None,
-        json!({}).to_string().into(),
-        None,
-        None,
-        false,
-    ).expect("Couldn't runLocal sayHello");
+        json!({}).to_string().into(), None).expect("Couldn't runLocal sayHello");
 
-    println!("Hello contract was responded to sayHello: {:#?}", response);
+    println!("Hello contract was responded to sayHello: {}", response);
 
 }
