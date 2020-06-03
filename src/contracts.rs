@@ -118,7 +118,7 @@ pub struct ResultOfRun {
 pub struct ResultOfLocalRun {
     pub output: Value,
     pub fees: Option<TransactionFees>,
-    pub updated_account: Option<serde_json::Value>
+    pub account: Option<serde_json::Value>
 }
 
 #[derive(Deserialize, Debug, PartialEq)]

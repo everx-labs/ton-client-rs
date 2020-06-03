@@ -48,7 +48,7 @@ fn test_local_run() {
         &address, None, msg.message.clone(), None, None, None, true).unwrap();
         
     assert!(result.fees.is_some());
-    assert_eq!(result.updated_account.unwrap()["acc_type"], 1); // account active
+    assert_eq!(result.account.unwrap()["acc_type"], 1); // account active
 
     println!("{:#?}", result.fees.unwrap());
 
@@ -88,7 +88,7 @@ fn test_local_run() {
 
     let local_response = ton_client.contracts.run_local(
         &address,
-        Some(result.updated_account.unwrap().into()),
+        Some(result.account.unwrap().into()),
         abi.clone(),
         "sayHello",
         None,
@@ -98,5 +98,5 @@ fn test_local_run() {
 
     assert_eq!(local_response.output["value0"], format!("0x{:x}", time));
     assert!(local_response.fees.is_none());
-    assert!(local_response.updated_account.is_none());
+    assert!(local_response.account.is_none());
 }
