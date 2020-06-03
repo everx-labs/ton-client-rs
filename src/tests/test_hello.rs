@@ -22,7 +22,7 @@ fn test_hello() {
     let keypair = ton_client.crypto.generate_ed25519_keys().expect("Couldn't create key pair");
 
     let prepared_address = ton_client.contracts.get_deploy_address(
-        &HELLO_ABI,
+        HELLO_ABI.to_string().into(),
         &HELLO_IMAGE,
         None,
         &keypair.public,
@@ -31,7 +31,7 @@ fn test_hello() {
     super::get_grams_from_giver(&ton_client, &prepared_address, None);
 
     let hello_address = ton_client.contracts.deploy(
-        &HELLO_ABI,
+        HELLO_ABI.to_string().into(),
         &HELLO_IMAGE,
         None,
         json!({}).to_string().into(),
@@ -43,7 +43,7 @@ fn test_hello() {
 
     ton_client.contracts.run(
     &hello_address,
-    &HELLO_ABI,
+    HELLO_ABI.to_string().into(),
     "touch",
     None,
     json!({}).to_string().into(),
@@ -53,7 +53,7 @@ fn test_hello() {
     let response = ton_client.contracts.run_local(
         &hello_address,
         None,
-        &HELLO_ABI,
+        HELLO_ABI.to_string().into(),
         "sayHello",
         None,
         json!({}).to_string().into(),
@@ -63,5 +63,4 @@ fn test_hello() {
     ).expect("Couldn't runLocal sayHello");
 
     println!("Hello contract was responded to sayHello: {:#?}", response);
-
 }
