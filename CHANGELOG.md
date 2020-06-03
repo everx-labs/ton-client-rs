@@ -9,8 +9,8 @@ All notable changes to this project will be documented in this file.
 ### New
 - `run_local_msg` function for processing given message locally
 - `run_local` funtion now take flag `emulate_transaction` to run contract in transaction executor
-which processes all transaction phases to emulate processing on node. Transaction fees are returned
-if this flag is `true`.
+which processes all transaction phases to emulate processing on node. Transaction fees and updated
+contract state are returnedi f this flag is `true`.
 
 ## 0.23.0 - May 18, 2020
 ### Featured

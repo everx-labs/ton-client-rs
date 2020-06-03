@@ -21,7 +21,7 @@ fn test_run_get_local() {
 
     let mut result = ton_client.contracts.run_get(
         None,
-        Some(&elector),
+        Some(elector.into()),
         "participant_list",
         None
     ).unwrap();

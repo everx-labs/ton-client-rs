@@ -160,6 +160,56 @@ impl std::fmt::Display for TonAddress {
     }
 }
 
+/// Any JSON object used in SDL functions
+#[derive(Clone, PartialEq, Debug)]
+pub enum JsonValue {
+    Json(String),
+    Value(serde_json::Value)
+}
+
+impl From<String> for JsonValue {
+   fn from(string: String) -> Self {
+       JsonValue::Json(string)
+   }
+}
+
+impl From<&str> for JsonValue {
+   fn from(string: &str) -> Self {
+       JsonValue::Json(string.to_owned())
+   }
+}
+
+impl From<serde_json::Value> for JsonValue {
+   fn from(value: serde_json::Value) -> Self {
+       JsonValue::Value(value)
+   }
+}
+
+impl JsonValue {
+    pub fn to_value(self) -> TonResult<serde_json::Value> {
+        match self {
+            JsonValue::Json(string) => {
+                serde_json::from_str(&string)
+                    .map_err(|_| TonErrorKind::InvalidArg(string).into())
+            }
+            JsonValue::Value(value) => Ok(value)
+        }
+    }
+}
+
+impl std::fmt::Display for JsonValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JsonValue::Json(string) => write!(f, "{}", string),
+            JsonValue::Value(value) => write!(f, "{}", value)
+        }
+    }
+}
+
+pub fn option_params_to_value(params: Option<JsonValue>) -> TonResult<Option<serde_json::Value>> {
+    params.map(|params| params.to_value()).transpose()
+}
+
 #[test]
 fn test_address_parsing() {
     let short = "fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260";

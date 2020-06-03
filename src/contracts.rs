@@ -11,7 +11,8 @@
  * limitations under the License.
  */
 
-use crate::{Ed25519KeyPair, Ed25519Public, TonAddress};
+use crate::{Ed25519KeyPair, Ed25519Public, JsonValue, TonAddress};
+use crate::types::option_params_to_value;
 use crate::error::*;
 use serde_json::Value;
 use crate::interop::{InteropContext, Interop};
@@ -113,9 +114,11 @@ pub struct ResultOfRun {
 
 /// Result of `run` function running. Contains parameters returned by contract function
 #[derive(Deserialize, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ResultOfLocalRun {
     pub output: Value,
-    pub fees: Option<TransactionFees>
+    pub fees: Option<TransactionFees>,
+    pub account: Option<serde_json::Value>
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -164,7 +167,7 @@ pub(crate) struct ParamsOfProcessMessage{
     pub try_index: Option<u8>,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
 pub(crate) struct RunGetAccount {
     #[serde(rename(serialize = "codeBase64"))]
     pub code: Option<String>,
@@ -204,18 +207,6 @@ pub(crate) struct ParamsOfProcessTransaction{
     pub address: TonAddress,
 }
 
-/// Parameters to be passed into contract function
-pub enum RunParameters {
-     Json(String),
-    // Values(...)
-}
-
-impl<T: Into<String>> From<T> for RunParameters {
-    fn from(string: T) -> Self {
-        RunParameters::Json(string.into())
-    }
-}
-
 /// Contract management struct
 pub struct TonContracts {
     context: InteropContext,
@@ -229,9 +220,9 @@ impl TonContracts {
     /// Get address for contract deploying
     pub fn get_deploy_address(
         &self,
-        abi: &str,
+        abi: JsonValue,
         image: &[u8],
-        init_params: Option<RunParameters>,
+        init_params: Option<JsonValue>,
         public_key: &Ed25519Public,
         workchain_id: i32,
     ) -> TonResult<TonAddress> {
@@ -243,59 +234,40 @@ impl TonContracts {
     /// Get contract deploy data: image (state init), storage data and deploying address
     pub fn get_deploy_data(
         &self,
-        abi: Option<&str>,
+        abi: Option<JsonValue>,
         image: Option<&[u8]>,
-        init_params: Option<RunParameters>,
+        init_params: Option<JsonValue>,
         public_key: &Ed25519Public,
         workchain_id: Option<i32>,
     ) -> TonResult<ResultOfGetDeployData> {
-        let abi = abi.map(|val| {
-            serde_json::from_str(val).map_err(|_| TonErrorKind::InvalidArg(val.to_owned()))
-        }).transpose()?;
-
         Interop::json_request(
             self.context,
             "contracts.deploy.data",
             ParamsOfGetDeployData {
-                abi,
+                abi: option_params_to_value(abi)?,
                 image_base64: image.map(|val| base64::encode(val)),
-                init_params: Self::option_params_to_value(init_params)?,
+                init_params: option_params_to_value(init_params)?,
                 public_key_hex: public_key.clone(),
                 workchain_id: workchain_id,
             })
     }
 
-    fn params_to_value(params: RunParameters) -> TonResult<Value> {
-        let str_params = match &params {
-            RunParameters::Json(string) => string
-        };
-       serde_json::from_str(str_params)
-            .map_err(|_| TonErrorKind::InvalidArg(str_params.to_owned()).into())
-    }
-
-    fn option_params_to_value(params: Option<RunParameters>) -> TonResult<Option<Value>> {
-        params.map(|params|  Self::params_to_value(params)).transpose()
-    }
-
     /// Deploy contract to TON blockchain
     pub fn deploy(
         &self,
-        abi: &str,
+        abi: JsonValue,
         code: &[u8],
-        constructor_header: Option<RunParameters>,
-        constructor_params: RunParameters,
-        init_params: Option<RunParameters>,
+        constructor_header: Option<JsonValue>,
+        constructor_params: JsonValue,
+        init_params: Option<JsonValue>,
         keys: &Ed25519KeyPair,
         workchain_id: i32,
     ) -> TonResult<ResultOfDeploy> {
-        let abi = serde_json::from_str(abi)
-            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-
         Interop::json_request(self.context, "contracts.deploy", ParamsOfDeploy {
-            abi,
-            init_params: Self::option_params_to_value(init_params)?,
-            constructor_header: Self::option_params_to_value(constructor_header)?,
-            constructor_params: Self::params_to_value(constructor_params)?,
+            abi: abi.to_value()?,
+            init_params: option_params_to_value(init_params)?,
+            constructor_header: option_params_to_value(constructor_header)?,
+            constructor_params:constructor_params.to_value()?,
             image_base64: base64::encode(code),
             key_pair: keys.clone(),
             workchain_id: workchain_id,
@@ -307,21 +279,18 @@ impl TonContracts {
     pub fn run(
         &self,
         address: &TonAddress,
-        abi: &str,
+        abi: JsonValue,
         function_name: &str,
-        header: Option<RunParameters>,
-        input: RunParameters,
+        header: Option<JsonValue>,
+        input: JsonValue,
         keys: Option<&Ed25519KeyPair>,
     ) -> TonResult<ResultOfRun> {
-        let abi = serde_json::from_str(abi)
-            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-
         Interop::json_request(self.context, "contracts.run", ParamsOfRun {
             address: address.clone(),
-            abi,
+            abi: abi.to_value()?,
             function_name: function_name.to_string(),
-            header: Self::option_params_to_value(header)?,
-            input: Self::params_to_value(input)?,
+            header: option_params_to_value(header)?,
+            input: input.to_value()?,
             key_pair: keys.cloned(),
             try_index: None
         })
@@ -331,30 +300,22 @@ impl TonContracts {
     pub fn run_local(
         &self,
         address: &TonAddress,
-        account: Option<&str>,
-        abi: &str,
+        account: Option<JsonValue>,
+        abi: JsonValue,
         function_name: &str,
-        header: Option<RunParameters>,
-        input: RunParameters,
+        header: Option<JsonValue>,
+        input: JsonValue,
         keys: Option<&Ed25519KeyPair>,
         time: Option<u32>,
         emulate_transaction: bool
     ) -> TonResult<ResultOfLocalRun> {
-        let abi = serde_json::from_str(abi)
-           .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-
-        let account = account.map(|acc_str| {
-                serde_json::from_str(acc_str)
-                    .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))
-        }).transpose()?;
-
         Interop::json_request(self.context, "contracts.run.local", ParamsOfLocalRun {
             address: address.clone(),
-            account,
-            abi,
+            account: option_params_to_value(account)?,
+            abi: abi.to_value()?,
             function_name: function_name.to_string(),
-            header: Self::option_params_to_value(header)?,
-            input: Self::params_to_value(input)?,
+            header: option_params_to_value(header)?,
+            input: input.to_value()?,
             key_pair: keys.cloned(),
             time,
             full_run: emulate_transaction
@@ -365,27 +326,18 @@ impl TonContracts {
     pub fn run_local_msg(
         &self,
         address: &TonAddress,
-        account: Option<&str>,
+        account: Option<JsonValue>,
         message: EncodedMessage,
-        abi: Option<&str>,
+        abi: Option<JsonValue>,
         function_name: Option<&str>,
         time: Option<u32>,
         emulate_transaction: bool,
     ) -> TonResult<ResultOfLocalRun> {
-        let abi = abi.map(|abi| serde_json::from_str(abi)
-                .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))
-        ).transpose()?;
-
-        let account = account.map(|acc_str| {
-                serde_json::from_str(acc_str)
-                    .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))
-        }).transpose()?;
-
         Interop::json_request(self.context, "contracts.run.local.msg", ParamsOfLocalRunWithMsg {
             address: address.clone(),
-            account,
+            account: option_params_to_value(account)?,
             message_base64: base64::encode(&message.message_body),
-            abi,
+            abi: option_params_to_value(abi)?,
             function_name: function_name.map(|val| val.to_string()),
             time,
             full_run: emulate_transaction
@@ -395,18 +347,15 @@ impl TonContracts {
     /// Decodes input message body with encoded contract call parameters
     pub fn decode_input_message_body(
         &self,
-        abi: &str,
+        abi: JsonValue,
         body: &[u8],
         internal: bool,
     ) -> TonResult<ResultOfDecodeMessageBody> {
-        let abi = serde_json::from_str(abi)
-           .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-
         Interop::json_request(
             self.context,
             "contracts.run.unknown.input",
             ParamsOfDecodeMessageBody {
-                abi,
+                abi: abi.to_value()?,
                 body_base64: base64::encode(body),
                 internal,
         })
@@ -415,17 +364,14 @@ impl TonContracts {
     /// Decode external outbound message body with encoded contract function response or event
     pub fn decode_output_message_body(
         &self,
-        abi: &str,
+        abi: JsonValue,
         body: &[u8]
     ) -> TonResult<ResultOfDecodeMessageBody> {
-        let abi = serde_json::from_str(abi)
-           .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-
         Interop::json_request(
             self.context,
             "contracts.run.unknown.output",
             ParamsOfDecodeMessageBody {
-                abi,
+                abi: abi.to_value()?,
                 body_base64: base64::encode(body),
                 internal: false,
         })
@@ -435,22 +381,19 @@ impl TonContracts {
     pub fn create_run_message(
         &self,
         address: &TonAddress,
-        abi: &str,
+        abi: JsonValue,
         function_name: &str,
-        header: Option<RunParameters>,
-        input: RunParameters,
+        header: Option<JsonValue>,
+        input: JsonValue,
         keys: Option<&Ed25519KeyPair>,
         try_index: Option<u8>
     ) -> TonResult<EncodedMessage> {
-        let abi = serde_json::from_str(abi)
-            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-
         Interop::json_request(self.context, "contracts.run.message", ParamsOfRun {
             address: address.clone(),
-            abi,
+            abi: abi.to_value()?,
             function_name: function_name.to_string(),
-            header: Self::option_params_to_value(header)?,
-            input: Self::params_to_value(input)?,
+            header: option_params_to_value(header)?,
+            input: input.to_value()?,
             key_pair: keys.cloned(),
             try_index
         })
@@ -459,26 +402,23 @@ impl TonContracts {
     /// Create message to deploy contract
     pub fn create_deploy_message(
         &self,
-        abi: &str,
+        abi: JsonValue,
         code: &[u8],
-        constructor_header: Option<RunParameters>,
-        constructor_params: RunParameters,
-        init_params: Option<RunParameters>,
+        constructor_header: Option<JsonValue>,
+        constructor_params: JsonValue,
+        init_params: Option<JsonValue>,
         keys: &Ed25519KeyPair,
         workchain_id: i32,
         try_index: Option<u8>
     ) -> TonResult<ResultOfCreateDeployMessage> {
-        let abi = serde_json::from_str(abi)
-            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))?;
-
         Interop::json_request(
             self.context,
             "contracts.deploy.message",
             ParamsOfDeploy {
-                abi,
-                init_params: Self::option_params_to_value(init_params)?,
-                constructor_header: Self::option_params_to_value(constructor_header)?,
-                constructor_params: Self::params_to_value(constructor_params)?,
+                abi: abi.to_value()?,
+                init_params: option_params_to_value(init_params)?,
+                constructor_header: option_params_to_value(constructor_header)?,
+                constructor_params: constructor_params.to_value()?,
                 image_base64: base64::encode(code),
                 key_pair: keys.clone(),
                 workchain_id: workchain_id,
@@ -499,19 +439,15 @@ impl TonContracts {
     pub fn process_message(
         &self,
         message: EncodedMessage,
-        abi: Option<&str>,
+        abi: Option<JsonValue>,
         function_name: Option<&str>,
         try_index: Option<u8>
     ) -> TonResult<ResultOfRun> {
-        let abi = abi.map(|abi| serde_json::from_str(abi)
-                .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))
-        ).transpose()?;
-
         Interop::json_request(
             self.context,
             "contracts.process.message",
             ParamsOfProcessMessage {
-                abi,
+                abi: option_params_to_value(abi)?,
                 function_name: function_name.map(|val| val.to_owned()),
                 try_index,
                 message: message.into()
@@ -523,19 +459,23 @@ impl TonContracts {
     pub fn run_get(
         &self,
         address: Option<&TonAddress>,
-        account: Option<&str>,
+        account: Option<JsonValue>,
         function_name: &str,
-        input: Option<RunParameters>,
+        input: Option<JsonValue>,
     ) -> TonResult<ResultOfLocalRun> {
-        let mut account: RunGetAccount = serde_json::from_str(account.unwrap_or("{}"))
-            .map_err(|_| TonErrorKind::InvalidArg("account".to_owned()))?;
+        let mut account: RunGetAccount = account.map(|val| {
+                serde_json::from_value(val.to_value()?)
+                    .map_err(|_| TonErrorKind::InvalidArg("account".to_owned()))
+            })
+            .transpose()?
+            .unwrap_or_default();
         if let Some(addr) = address {
             account.id = Some(addr.to_string());
         }
         Interop::json_request(self.context, "tvm.get", ParamsOfRunGet {
             account,
             function_name: function_name.to_string(),
-            input: Self::option_params_to_value(input)?,
+            input: option_params_to_value(input)?,
         })
     }
 
@@ -557,19 +497,14 @@ impl TonContracts {
     pub fn resolve_error(
         &self,
         address: &TonAddress,
-        account: Option<&str>,
+        account: Option<JsonValue>,
         message: EncodedMessage,
         send_time: u32,
         error: InnerSdkError
-    ) -> TonResult<ResultOfRun> {
-        let account = account.map(|acc_str| {
-                serde_json::from_str(acc_str)
-                    .map_err(|_| TonErrorKind::InvalidArg(acc_str.to_owned()))
-        }).transpose()?;
-
+    ) -> TonResult<()> {
         Interop::json_request(self.context, "contracts.resolve.error", ParamsOfResolveError {
             address: address.clone(),
-            account: account,
+            account: option_params_to_value(account)?,
             message_base64: base64::encode(&message.message_body),
             time: send_time,
             main_error: error,
@@ -580,20 +515,14 @@ impl TonContracts {
     pub fn process_transaction(
         &self,
         address: &TonAddress,
-        transaction: &str,
-        abi: Option<&str>,
+        transaction: JsonValue,
+        abi: Option<JsonValue>,
         function_name: Option<&str>,
     ) -> TonResult<ResultOfRun> {
-        let transaction = serde_json::from_str(transaction)
-            .map_err(|_| TonErrorKind::InvalidArg(transaction.to_owned()))?;
-        let abi = abi.map(|abi| serde_json::from_str(abi)
-            .map_err(|_| TonErrorKind::InvalidArg(abi.to_owned()))
-        ).transpose()?;
-
         Interop::json_request(self.context, "contracts.process.transaction", ParamsOfProcessTransaction {
             address: address.clone(),
-            abi,
-            transaction,
+            abi: option_params_to_value(abi)?,
+            transaction: transaction.to_value()?,
             function_name: function_name.map(|val| val.to_owned())
         })
     }

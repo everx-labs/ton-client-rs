@@ -14,7 +14,7 @@
 use crate::tests::*;
 use crate::error::{TonError, TonErrorKind, InnerSdkError};
 
-fn extract_inner_error(error: &TonError) -> InnerSdkError {
+pub fn extract_inner_error(error: &TonError) -> InnerSdkError {
     match error {
 		TonError(TonErrorKind::InnerSdkError(err), _) => {
             //println!("{:#?}", err);
@@ -24,7 +24,7 @@ fn extract_inner_error(error: &TonError) -> InnerSdkError {
 	}
 }
 
-fn check_error(error: &TonError, main_code: isize, original_code: Option<isize>) {
+pub fn check_error(error: &TonError, main_code: isize, original_code: Option<isize>) {
     let err = extract_inner_error(error);
     
     assert_eq!(err.code, main_code);
@@ -53,12 +53,12 @@ fn test_errors() {
     let keypair = ton_client.crypto.generate_ed25519_keys().expect("Couldn't create key pair");
 
     let hello_address = ton_client.contracts.get_deploy_address(
-        &HELLO_ABI, &HELLO_IMAGE, None, &keypair.public, 0
+        HELLO_ABI.to_string().into(), &HELLO_IMAGE, None, &keypair.public, 0
     ).expect("Couldn't calculate address");
 
     // deploy without balance
     let result = ton_client.contracts.deploy(
-        &HELLO_ABI, &HELLO_IMAGE, None, json!({}).to_string().into(), None, &keypair, 0
+        HELLO_ABI.to_string().into(), &HELLO_IMAGE, None, json!({}).into(), None, &keypair, 0
     ).unwrap_err();
 
     let main_code = if *NODE_SE {
@@ -73,7 +73,7 @@ fn test_errors() {
 
     // deploy with low balance
     let msg = ton_client.contracts.create_deploy_message(
-        &HELLO_ABI, &HELLO_IMAGE, None, json!({}).to_string().into(), None, &keypair, 0, None
+        HELLO_ABI.to_string().into(), &HELLO_IMAGE, None, json!({}).into(), None, &keypair, 0, None
     ).unwrap();
 
     let real_original_code = if *ABI_VERSION == 2 {
@@ -94,7 +94,7 @@ fn test_errors() {
     };
 
     let account = ton_client.queries.accounts.query(
-        &json!({"id": { "eq": hello_address.to_string() }}).to_string(),
+        json!({"id": { "eq": hello_address.to_string() }}).into(),
         "id acc_type code data balance balance_other { currency value } last_paid",
         None, None
     ).unwrap()[0].clone();
@@ -104,7 +104,7 @@ fn test_errors() {
     let code = error.code;
     let result = ton_client.contracts.resolve_error(
         &hello_address,
-        Some(&account.to_string()),
+        Some(account.into()),
         msg.message,
         time,
         error,
@@ -121,7 +121,7 @@ fn test_errors() {
     // run before deploy
     super::get_grams_from_giver(&std_ton_client, &hello_address, None);
     let result = ton_client.contracts.run(
-        &hello_address, &HELLO_ABI, "touch", None, json!({}).to_string().into(), Some(&keypair)
+        &hello_address, HELLO_ABI.to_string().into(), "touch", None, json!({}).to_string().into(), Some(&keypair)
     ).unwrap_err();
 
     if *NODE_SE {
@@ -132,13 +132,13 @@ fn test_errors() {
 
     // normal deploy
     std_ton_client.contracts.deploy(
-        &HELLO_ABI, &HELLO_IMAGE, None, json!({}).to_string().into(), None, &keypair, 0
+        HELLO_ABI.to_string().into(), &HELLO_IMAGE, None, json!({}).to_string().into(), None, &keypair, 0
     ).unwrap();
 
     // unsigned message
     let result = ton_client.contracts.run(
         &hello_address,
-        &HELLO_ABI,
+        HELLO_ABI.to_string().into(),
         "sendAllMoney",
         None,
         json!({
@@ -155,7 +155,7 @@ fn test_errors() {
 
     std_ton_client.contracts.run(
         &hello_address,
-        &HELLO_ABI,
+        HELLO_ABI.to_string().into(),
         "sendAllMoney",
         None,
         json!({
@@ -165,7 +165,7 @@ fn test_errors() {
     ).unwrap();
 
     let result = ton_client.contracts.run(
-        &hello_address, &HELLO_ABI, "touch", None, json!({}).to_string().into(), Some(&keypair)
+        &hello_address, HELLO_ABI.to_string().into(), "touch", None, json!({}).to_string().into(), Some(&keypair)
     ).unwrap_err();
 
     if *NODE_SE {
