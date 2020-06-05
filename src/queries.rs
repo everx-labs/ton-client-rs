@@ -13,7 +13,7 @@
 
 use crate::interop::{InteropContext, Interop};
 use serde_json::Value;
-use crate::{TonResult, TonError};
+use crate::{JsonValue, TonResult, TonError};
 use futures::stream::Stream;
 use futures::{Async, Poll};
 
@@ -114,10 +114,10 @@ impl TonQueriesCollection {
     }
 
     /// Query request. Returns set of GraphQL objects satisfying conditions described by `filter`
-    pub fn query(&self, filter: &str, result: &str, order: Option<OrderBy>, limit: Option<usize>) -> TonResult<Vec<Value>> {
+    pub fn query(&self, filter: JsonValue, result: &str, order: Option<OrderBy>, limit: Option<usize>) -> TonResult<Vec<Value>> {
         let result: ResultOfQuery = Interop::json_request(self.context, "queries.query", ParamsOfQuery {
             table: self.name.to_owned(),
-            filter: filter.to_owned(),
+            filter: filter.to_string(),
             result: result.to_owned(),
             order,
             limit
@@ -128,20 +128,20 @@ impl TonQueriesCollection {
     /// Wait for appearance of an object satisfying conditions described by `filter`.
     /// If such an object already exists it is returned immediately.
     /// In case of several objects satisfying provided conditions exists first founded object returned.
-    pub fn wait_for(&self, filter: &str, result: &str) -> TonResult<Value> {
+    pub fn wait_for(&self, filter: JsonValue, result: &str) -> TonResult<Value> {
         let result: SingleResult = Interop::json_request(self.context, "queries.wait.for", ParamsOfSubscribe {
             table: self.name.to_owned(),
-            filter: filter.to_owned(),
+            filter: filter.to_string(),
             result: result.to_owned()
         })?;
         Ok(result.result)
     }
 
     /// Subscribe for object updates. Returns `Stream` containing objects states
-    pub fn subscribe<'a>(&'a self, filter: &str, result: &str) -> TonResult<Box<dyn Stream<Item=Value, Error=TonError> + 'a>> {
+    pub fn subscribe<'a>(&'a self, filter: JsonValue, result: &str) -> TonResult<Box<dyn Stream<Item=Value, Error=TonError> + 'a>> {
         let result: SubscribeHandle = Interop::json_request(self.context, "queries.subscribe", ParamsOfSubscribe {
             table: self.name.to_owned(),
-            filter: filter.to_owned(),
+            filter: filter.to_string(),
             result: result.to_owned()
         })?;
         Ok(Box::new(SubscribeStream { collection: self, handle: result.handle }))
