@@ -19,16 +19,16 @@ fn test_piggy() {
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
     let prepared_address = ton.contracts.get_deploy_address(
-        &WALLET_ABI,
+        WALLET_ABI.to_string().into(),
         &WALLET_IMAGE,
         None,
         &keypair.public,
         0).unwrap();
 
-    super::get_grams_from_giver(&ton, &prepared_address);
+    super::get_grams_from_giver(&ton, &prepared_address, None);
 
     let wallet_address = ton.contracts.deploy(
-        &WALLET_ABI,
+        WALLET_ABI.to_string().into(),
         &WALLET_IMAGE,
         None,
         json!({}).to_string().into(),
@@ -39,16 +39,16 @@ fn test_piggy() {
     .address;
 
     let prepared_address = ton.contracts.get_deploy_address(
-        &PIGGY_BANK_ABI,
+        PIGGY_BANK_ABI.to_string().into(),
         &PIGGY_BANK_IMAGE,
         None,
         &keypair.public,
         0).unwrap();
 
-    super::get_grams_from_giver(&ton, &prepared_address);
+    super::get_grams_from_giver(&ton, &prepared_address, None);
 
     let piggy_bank_address = ton.contracts.deploy(
-        &PIGGY_BANK_ABI,
+        PIGGY_BANK_ABI.to_string().into(),
         &PIGGY_BANK_IMAGE,
         None,
         json!({
@@ -65,11 +65,11 @@ fn test_piggy() {
 
     // check queries on real data
     let query_result = ton.queries.accounts.query(
-        &json!({
+        json!({
             "id": {
                 "eq": piggy_bank_address.to_string()
             }
-        }).to_string(),
+        }).into(),
         ACCOUNT_FIELDS,
         Some(OrderBy{ path: "id".to_owned(), direction: SortDirection::Ascending }),
         Some(5)).unwrap();
@@ -81,11 +81,11 @@ fn test_piggy() {
         }));
 
     let wait_for_result = ton.queries.accounts.wait_for(
-        &json!({
+        json!({
             "id": {
                 "eq": piggy_bank_address.to_string()
             }
-        }).to_string(),
+        }).into(),
         ACCOUNT_FIELDS).unwrap();
 
     assert_eq!(
@@ -98,28 +98,34 @@ fn test_piggy() {
     let get_goal_answer = ton.contracts.run_local(
         &piggy_bank_address,
         None,
-        &PIGGY_BANK_ABI,
+        PIGGY_BANK_ABI.to_string().into(),
         "getGoal",
         None,
-        json!({}).to_string().into(), None).unwrap();
+        json!({}).to_string().into(),
+        None,
+        None,
+        false,
+    ).unwrap();
 
-    println!("getGoal answer {}", get_goal_answer);
+    assert!(get_goal_answer.fees.is_none());
+
+    println!("getGoal answer {:#?}", get_goal_answer);
 
     let prepared_address = ton.contracts.get_deploy_address(
-        &SUBSCRIBE_ABI,
+        SUBSCRIBE_ABI.to_string().into(),
         &SUBSCRIBE_IMAGE,
         None,
         &keypair.public,
         0).unwrap();
 
-    super::get_grams_from_giver(&ton, &prepared_address);
+    super::get_grams_from_giver(&ton, &prepared_address, None);
 
     let subscription_constructor_params = json!({
         "wallet" : wallet_address.to_string()
     }).to_string().into();
 
     let subscripition_address = ton.contracts.deploy(
-        &SUBSCRIBE_ABI,
+        SUBSCRIBE_ABI.to_string().into(),
         &SUBSCRIBE_IMAGE,
         None,
         subscription_constructor_params,
@@ -135,16 +141,16 @@ fn test_piggy() {
 
     // subscribe for updates 
     let subscribe_stream = ton.queries.accounts.subscribe(
-        &json!({
+        json!({
             "id": {
                 "eq": subscripition_address.to_string()
             }
-        }).to_string(),
+        }).into(),
         ACCOUNT_FIELDS).unwrap();
 
     let _set_subscription_answer = ton.contracts.run(
         &wallet_address,
-        &WALLET_ABI,
+        WALLET_ABI.to_string().into(),
         "setSubscriptionAccount",
         None,
         set_subscription_params,
@@ -155,7 +161,7 @@ fn test_piggy() {
 
     let _subscribe_answer = ton.contracts.run(
         &subscripition_address,
-        &SUBSCRIBE_ABI,
+        SUBSCRIBE_ABI.to_string().into(),
         "subscribe",
         None,
         json!({
@@ -164,7 +170,7 @@ fn test_piggy() {
             "to": piggy_bank_address.to_string(),
             "value" : 123,
             "period" : 456
-        }).to_string().into(),
+        }).into(),
         Some(&keypair)
     ).unwrap();
 
@@ -182,9 +188,10 @@ fn test_piggy() {
         }));
 
     let subscr_id_str = hex::encode(&[0x22; 32]);
+
     let _subscribe_answer = ton.contracts.run(
         &subscripition_address,
-        &SUBSCRIBE_ABI,
+        SUBSCRIBE_ABI.to_string().into(),
         "subscribe",
         None,
         json!({
@@ -193,21 +200,23 @@ fn test_piggy() {
             "to": piggy_bank_address.to_string(),
             "value" : 5000000000 as i64,
             "period" : 86400
-        }).to_string().into(),
+        }).into(),
         Some(&keypair)
     ).unwrap();
 
     let subscriptions = ton.contracts.run_local(
         &subscripition_address,
         None,
-        &SUBSCRIBE_ABI,
+        SUBSCRIBE_ABI.to_string().into(),
         "getSubscription",
         None,
         json!({
             "subscriptionId" : format!("0x{}", subscr_id_str),
-        }).to_string().into(),
-        Some(&keypair)
+        }).into(),
+        Some(&keypair),
+        None,
+        false,
     ).unwrap();
 
-    println!("getSubscription answer {}", subscriptions);
+    println!("getSubscription answer {:#?}", subscriptions);
 }

@@ -6,6 +6,9 @@ use std::env;
 use crate::{TonClient, Ed25519KeyPair, Ed25519Public, TonAddress, ResultOfGetDeployData};
 mod test_piggy;
 mod test_hello;
+mod test_run_get;
+mod test_errors;
+mod test_local_run;
 
 const ROOT_CONTRACTS_PATH: &str = "src/tests/contracts/";
 
@@ -59,6 +62,13 @@ pub fn create_client() -> TonClient {
 	TonClient::new_with_base_url(&NODE_ADDRESS).unwrap()
 }
 
+pub fn now() -> u32 {
+	std::time::SystemTime::now()
+		.duration_since(std::time::SystemTime::UNIX_EPOCH)
+		.unwrap()
+		.as_secs() as u32
+}
+
 #[test]
 fn test_contracts() {
     // Deploy Messages
@@ -68,16 +78,16 @@ fn test_contracts() {
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
 
 	let prepared_wallet_address = ton.contracts.get_deploy_address(
-		&WALLET_ABI,
+		WALLET_ABI.to_string().into(),
 		&WALLET_IMAGE,
 		None,
 		&keys.public,
 		0).unwrap();
 
-	get_grams_from_giver(&ton, &prepared_wallet_address);
+	get_grams_from_giver(&ton, &prepared_wallet_address, None);
 
     let deploy_result = ton.contracts.deploy(
-		&WALLET_ABI,
+		WALLET_ABI.to_string().into(),
 		&WALLET_IMAGE,
 		None,
 		json!({}).to_string().into(),
@@ -90,7 +100,7 @@ fn test_contracts() {
 
 	// check that second deploy returns `alreadyDeployed == true`
 	let deploy_result = ton.contracts.deploy(
-		&WALLET_ABI,
+		WALLET_ABI.to_string().into(),
 		&WALLET_IMAGE,
 		None,
 		json!({}).to_string().into(),
@@ -105,7 +115,7 @@ fn test_contracts() {
 		// check header params passing
 		let mut message = ton.contracts.create_run_message(
 			&deploy_result.address,
-			&WALLET_ABI,
+			WALLET_ABI.to_string().into(),
 			"createOperationLimit",
 			Some(json!({
 				"expire": 123
@@ -118,29 +128,30 @@ fn test_contracts() {
 
 		assert_eq!(message.expire, Some(123));
 		// set valid expire value in order to send message (core checks that message is not expired yet)
-		message.expire = Some(std::time::SystemTime::now()
-			.duration_since(std::time::SystemTime::UNIX_EPOCH)
-			.unwrap()
-			.as_secs() as u32 + 10);
+		message.expire = Some(now() + 10);
 
 		let result = ton.contracts.process_message(message, None, None, None);
 
 		match result.unwrap_err().0 {
-			crate::error::TonErrorKind::InnerSdkError(err) => assert_eq!(err.code, 1006),
+			crate::error::TonErrorKind::InnerSdkError(err) => {
+				println!("{:#?}", err);
+				assert_eq!(err.code, 3025); // 3025 - tvm execution failed
+				assert_eq!(&err.data["original_error"]["code"], 1006); // 1006 - message expired
+			}
 			_ => panic!("InnerSdkError expected")
 		}
 	};
 
     let result = ton.contracts.run(
         &deploy_result.address,
-        &WALLET_ABI,
+        WALLET_ABI.to_string().into(),
 		"createOperationLimit",
 		None,
         json!({
 			"value": 123
 		}).to_string().into(),
         Some(&keys)).unwrap();
-    println!("{}", result)
+    println!("{:#?}", result)
 }
 
 #[test]
@@ -152,16 +163,16 @@ fn test_call_aborted_transaction() {
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
 
 	let prepared_wallet_address = ton.contracts.get_deploy_address(
-		&SIMPLE_WALLET_ABI,
+		SIMPLE_WALLET_ABI.to_string().into(),
 		&SIMPLE_WALLET_IMAGE,
 		None,
 		&keys.public,
 		0).unwrap();
 
-	get_grams_from_giver(&ton, &prepared_wallet_address);
+	get_grams_from_giver(&ton, &prepared_wallet_address, None);
 
     let address = ton.contracts.deploy(
-		&SIMPLE_WALLET_ABI,
+		SIMPLE_WALLET_ABI.to_string().into(),
 		&SIMPLE_WALLET_IMAGE,
 		None,
 		json!({}).to_string().into(),
@@ -175,7 +186,7 @@ fn test_call_aborted_transaction() {
 
     let result = ton.contracts.run(
         &address,
-        &SIMPLE_WALLET_ABI,
+        SIMPLE_WALLET_ABI.to_string().into(),
 		"sendTransaction",
 		None,
         json!({
@@ -187,48 +198,51 @@ fn test_call_aborted_transaction() {
 	)
 	.unwrap_err();
 
+	println!("{:#}", result);
+
 	match result {
 		TonError(InnerSdkError(err), _) => {
 			assert_eq!(&err.source, "node");
-			assert_eq!(err.code, 101);
-			assert_eq!(err.data.is_some(), true);
-			assert_eq!(&err.data.as_ref().unwrap()["phase"], "computeVm");
+			assert_eq!(err.code, 3025);
+			assert_eq!(&err.data["phase"], "computeVm");
+			assert_eq!(&err.data["exit_code"], 101);
 		},
 		_ => panic!(),
 	};
 }
 
-pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress) {
+pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress, value: Option<u64>) {
 	if *NODE_SE {
 		ton.contracts.run(
 			&GIVER_ADDRESS,
-			&GIVER_ABI,
+			GIVER_ABI.to_string().into(),
 			"sendGrams",
 			None,
 			json!({
 				"dest": account.to_string(),
-				"amount": 10_000_000_000u64
+				"amount": value.unwrap_or(500_000_000u64)
 			}).to_string().into(),
 			None).unwrap();
 	} else {
 		ton.contracts.run(
 			&WALLET_ADDRESS,
-			&GIVER_WALLET_ABI,
+			GIVER_WALLET_ABI.to_string().into(),
 			"sendTransaction",
 			None,
 			json!({
 				"dest": account.to_string(),
-				"value": 500_000_000u64,
+				"value": value.unwrap_or(500_000_000u64),
 				"bounce": false
 			}).to_string().into(),
 			WALLET_KEYS.as_ref()).unwrap();
 	}
 
 	// wait for grams recieving
-	let wait_result = ton.queries.accounts.wait_for(&json!({
+	let wait_result = ton.queries.accounts.wait_for(
+		json!({
 			"id": { "eq": account.to_string() },
 			"balance": { "gt": "0" }
-		}).to_string(),
+		}).into(),
 		"id balance"
 	).unwrap();
 
@@ -247,7 +261,9 @@ fn test_decode_input() {
 
 	let ton = TonClient::default().unwrap();
 
-	let result = ton.contracts.decode_input_message_body(&SUBSCRIBE_ABI, &body).expect("Couldn't parse body");
+	let result = ton.contracts.decode_input_message_body(
+		SUBSCRIBE_ABI.to_string().into(), &body, false
+	).expect("Couldn't parse body");
 
 	assert_eq!(result.function, "subscribe");
 	assert_eq!(result.output, json!({
@@ -274,7 +290,7 @@ fn test_init_state() {
     let keys: Ed25519KeyPair = ton.crypto.generate_ed25519_keys().unwrap();
 
 	let wallet_address1 = ton.contracts.get_deploy_address(
-		&WALLET_ABI,
+		WALLET_ABI.to_string().into(),
 		&WALLET_IMAGE,
 		Some(json!({
 			"subscription": subscription_address1,
@@ -284,7 +300,7 @@ fn test_init_state() {
 		0).unwrap();
 
 	let wallet_address2 = ton.contracts.get_deploy_address(
-		&WALLET_ABI,
+		WALLET_ABI.to_string().into(),
 		&WALLET_IMAGE,
 		Some(json!({
 			"subscription": subscription_address2,
@@ -345,7 +361,7 @@ fn test_deploy_data() {
 
 	// init data and key
 	let result = ton.contracts.get_deploy_data(
-		Some(&WALLET_ABI),
+		Some(WALLET_ABI.to_string().into()),
 		None,
 		Some(json!({
 			"subscription": subscription_addess,
@@ -365,7 +381,7 @@ fn test_deploy_data() {
 
 	// all
 	let result = ton.contracts.get_deploy_data(
-		Some(&WALLET_ABI),
+		Some(WALLET_ABI.to_string().into()),
 		Some(&WALLET_IMAGE),
 		Some(json!({
 			"subscription": subscription_addess,
@@ -393,40 +409,31 @@ fn test_messages() {
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
     let address = ton.contracts.get_deploy_address(
-        &WALLET_ABI,
+        WALLET_ABI.to_string().into(),
         &WALLET_IMAGE,
         None,
         &keypair.public,
 		0).unwrap();
 
-	get_grams_from_giver(&ton, &address);
+	get_grams_from_giver(&ton, &address, None);
 
     let message = ton.contracts.create_deploy_message(
-        &WALLET_ABI,
+        WALLET_ABI.to_string().into(),
         &WALLET_IMAGE,
         None,
-        json!({}).to_string().into(),
+        json!({}).into(),
         None,
 		&keypair,
 		0,
 		None).unwrap();
-	let msg_id = message.message.message_id.clone();
-	ton.contracts.send_message(message.message).unwrap();
 
-	let deploy_transaction = ton.queries.transactions.wait_for(
-        &json!({
-            "in_msg": {
-                "eq": msg_id
-            }
-        }).to_string(),
-		"id aborted").unwrap();
-
-	assert!(!deploy_transaction["aborted"].as_bool().unwrap());
+	ton.contracts.process_message(
+		message.message, None, None, None).unwrap();
 
 	// check processing with result decoding
 	let run_message = ton.contracts.create_run_message(
 		&address,
-		&WALLET_ABI,
+		WALLET_ABI.to_string().into(),
 		"createOperationLimit",
 		None,
 		json!({
@@ -436,15 +443,30 @@ fn test_messages() {
 		None
 	).unwrap();
 
-	let run_result = ton.contracts.process_message(
-		run_message, Some(&WALLET_ABI), Some("createOperationLimit"), None).unwrap();
+	let msg_id = run_message.message_id.clone();
+	ton.contracts.send_message(run_message).unwrap();
+
+	let run_transaction = ton.queries.transactions.wait_for(
+        json!({
+            "in_msg": {
+                "eq": msg_id
+            }
+        }).into(),
+		TRANSACTION_FIELDS_ORDINARY).unwrap();
+
+	let run_result = ton.contracts.process_transaction(
+		&address,
+		run_transaction.into(),
+		Some(WALLET_ABI.to_string().into()),
+		Some("createOperationLimit")
+	).unwrap();
 
 	assert_eq!(run_result.output, json!({"value0": "0x0"}));
 
 	// check processing without result decoding
 	let run_message = ton.contracts.create_run_message(
 		&address,
-		&WALLET_ABI,
+		WALLET_ABI.to_string().into(),
 		"createArbitraryLimit",
 		None,
 		json!({
@@ -462,7 +484,7 @@ fn test_messages() {
 	// check processing transaction without output messages
 	let run_message = ton.contracts.create_run_message(
 		&address,
-		&WALLET_ABI,
+		WALLET_ABI.to_string().into(),
 		"sendTransaction",
 		None,
 		json!({
@@ -475,7 +497,41 @@ fn test_messages() {
 	).unwrap();
 
 	let run_result = ton.contracts.process_message(
-		run_message, Some(&WALLET_ABI), Some("sendTransaction"), None).unwrap();
+		run_message, Some(WALLET_ABI.to_string().into()), Some("sendTransaction"), None).unwrap();
 
 	assert_eq!(run_result.output, json!(null));
 }
+
+pub const TRANSACTION_FIELDS_ORDINARY: &str = r#"
+    id
+    aborted
+    compute {
+        skipped_reason
+        exit_code
+        success
+        gas_fees
+    }
+    storage {
+       status_change
+       storage_fees_collected
+    }
+    action {
+        success
+        valid
+        no_funds
+        result_code
+        total_fwd_fees
+        total_action_fees
+    }
+    in_msg
+    now
+    out_msgs
+    out_messages {
+        id
+        body
+        msg_type
+        value
+    }
+    status
+    total_fees
+"#;

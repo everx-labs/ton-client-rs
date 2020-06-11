@@ -1,6 +1,6 @@
 [package]
 name = "ton-client-rs"
-version = "0.23.0"
+version = "0.24.0"
 description = "TON SDK Client Library for Rust"
 authors = ["TON DEV SOLUTIONS LTD <support@tonlabs.io>"]
 edition = "2018"
@@ -21,8 +21,7 @@ futures = "0.1.26"
 crc16 = "0.4.0"
 error-chain = { version = "^0.12", default-features = false }
 
-#TODO: remove feature disabling after ton-labs-executor repo is used in SDK
-ton_client = { git = "https://github.com/tonlabs/TON-SDK.git", default_features = false, features = ["node_interaction"] }
+ton_client = { git = "https://github.com/tonlabs/TON-SDK.git", tag = "0" }
 
 [dev-dependencies]
 lazy_static = "1.4.0"

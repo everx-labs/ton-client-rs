@@ -2,8 +2,7 @@
  * Copyright 2018-2020 TON DEV SOLUTIONS LTD.
  *
  * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
- * this file except in compliance with the License.  You may obtain a copy of the
- * License at: https://ton.dev/licenses
+ * this file except in compliance with the License.
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,16 +22,16 @@ fn test_hello() {
     let keypair = ton_client.crypto.generate_ed25519_keys().expect("Couldn't create key pair");
 
     let prepared_address = ton_client.contracts.get_deploy_address(
-        &HELLO_ABI,
+        HELLO_ABI.to_string().into(),
         &HELLO_IMAGE,
         None,
         &keypair.public,
         0).expect("Couldn't create key pair");
 
-    super::get_grams_from_giver(&ton_client, &prepared_address);
+    super::get_grams_from_giver(&ton_client, &prepared_address, None);
 
     let hello_address = ton_client.contracts.deploy(
-        &HELLO_ABI,
+        HELLO_ABI.to_string().into(),
         &HELLO_IMAGE,
         None,
         json!({}).to_string().into(),
@@ -44,7 +43,7 @@ fn test_hello() {
 
     ton_client.contracts.run(
     &hello_address,
-    &HELLO_ABI,
+    HELLO_ABI.to_string().into(),
     "touch",
     None,
     json!({}).to_string().into(),
@@ -54,11 +53,14 @@ fn test_hello() {
     let response = ton_client.contracts.run_local(
         &hello_address,
         None,
-        &HELLO_ABI,
+        HELLO_ABI.to_string().into(),
         "sayHello",
         None,
-        json!({}).to_string().into(), None).expect("Couldn't runLocal sayHello");
+        json!({}).to_string().into(),
+        None,
+        None,
+        false,
+    ).expect("Couldn't runLocal sayHello");
 
-    println!("Hello contract was responded to sayHello: {}", response);
-
+    println!("Hello contract was responded to sayHello: {:#?}", response);
 }
