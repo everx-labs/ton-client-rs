@@ -40,7 +40,7 @@ use serde::de::DeserializeOwned;
 /// 
 /// `access_key` is key for authenicating user to Tonlabs node
 /// 
-#[derive(Default, Serialize)]
+#[derive(Default, Serialize, Clone, Debug)]
 #[serde(rename_all="camelCase")]
 pub struct TonClientConfig {
     pub base_url: Option<String>,

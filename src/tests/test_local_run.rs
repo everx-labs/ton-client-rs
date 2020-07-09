@@ -40,7 +40,7 @@ fn test_local_run() {
     super::get_grams_from_giver(&std_ton_client, &address, None);
 
     let msg = ton_client.contracts.create_deploy_message(
-        abi.clone(), &HELLO_IMAGE, None, json!({}).into(), None, &keypair, 0, None
+        abi.clone(), &HELLO_IMAGE, None, json!({}).into(), None, &keypair, 0
     ).expect("Couldn't create deploy message");
 
     // check full run of deploy - contract should become active

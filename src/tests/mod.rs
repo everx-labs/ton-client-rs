@@ -12,7 +12,7 @@
  */
 
 use std::env;
-use crate::{TonClient, Ed25519KeyPair, Ed25519Public, TonAddress, ResultOfGetDeployData};
+use crate::{TonClient, Ed25519KeyPair, Ed25519Public, TonAddress, ResultOfGetDeployData, JsonValue};
 mod test_piggy;
 mod test_hello;
 mod test_run_get;
@@ -132,14 +132,14 @@ fn test_contracts() {
 			json!({
 				"value": 123
 			}).to_string().into(),
-			Some(&keys),
-			None).unwrap();
+			Some(&keys)
+		).unwrap();
 
 		assert_eq!(message.expire, Some(123));
 		// set valid expire value in order to send message (core checks that message is not expired yet)
 		message.expire = Some(now() + 10);
 
-		let result = ton.contracts.process_message(message, None, None, None);
+		let result = ton.contracts.process_message(message, None, None, false);
 
 		match result.unwrap_err().0 {
 			crate::error::TonErrorKind::InnerSdkError(err) => {
@@ -258,6 +258,29 @@ pub fn get_grams_from_giver(ton: &TonClient, account: &TonAddress, value: Option
 	println!("wait result {}", wait_result);
 }
 
+pub fn deploy_with_giver(
+	client: &TonClient, abi: JsonValue, image: &[u8], params: JsonValue, keypair: &Ed25519KeyPair
+) -> TonAddress {
+    let prepared_address = client.contracts.get_deploy_address(
+        abi.clone(),
+        image,
+        None,
+        &keypair.public,
+        0).expect("Couldn't create key pair");
+
+    get_grams_from_giver(client, &prepared_address, None);
+
+    client.contracts.deploy(
+        abi,
+        image,
+        None,
+        params,
+        None,
+        keypair,
+        0)
+        .expect("Couldn't deploy contract")
+    .address
+}
 
 #[test]
 fn test_decode_input() {
@@ -412,6 +435,57 @@ fn test_deploy_data() {
 }
 
 #[test]
+fn test_retries() {
+	let config = crate::client::TonClientConfig {
+        base_url: Some(NODE_ADDRESS.to_string()),
+        message_retries_count: Some(10),
+        message_expiration_timeout: None,
+        message_expiration_timeout_grow_factor: Some(1.1),
+        message_processing_timeout: None,
+        message_processing_timeout_grow_factor: Some(0.9),
+        wait_for_timeout: None,
+        access_key: None,
+    };
+	let ton_client = TonClient::new(&config).unwrap();
+	
+    let keypair = ton_client.crypto.generate_ed25519_keys().expect("Couldn't create key pair");
+
+    let address = deploy_with_giver(
+		&ton_client,
+        WALLET_ABI.to_string().into(),
+        &WALLET_IMAGE,
+        json!({}).to_string().into(),
+        &keypair);
+
+    let mut threads = vec![];
+    for i in 0..10 {
+		let address = address.clone();
+		let config = config.clone();
+		let keypair = keypair.clone();
+        let str_address = address.to_string();
+        let str_address = str_address[..str_address.len() - 2].to_owned() + &format!("{:02x}", i);
+        let call = std::thread::spawn(move || {
+			let client = TonClient::new(&config).unwrap();
+			client.contracts.run(
+				&address,
+				WALLET_ABI.to_string().into(),
+				"setSubscriptionAccount",
+				None,
+				json!({
+					"addr": str_address
+				}).into(),
+				Some(&keypair)).unwrap();
+		});
+
+		threads.push(call);
+    }
+
+    for thread in threads {
+		thread.join().unwrap();
+	}
+}
+
+#[test]
 fn test_messages() {
     let ton = create_client();
 
@@ -433,11 +507,10 @@ fn test_messages() {
         json!({}).into(),
         None,
 		&keypair,
-		0,
-		None).unwrap();
+		0).unwrap();
 
 	ton.contracts.process_message(
-		message.message, None, None, None).unwrap();
+		message.message, None, None, false).unwrap();
 
 	// check processing with result decoding
 	let run_message = ton.contracts.create_run_message(
@@ -448,29 +521,46 @@ fn test_messages() {
 		json!({
 			"value": 100_000_000
 		}).to_string().into(),
-		Some(&keypair),
-		None
+		Some(&keypair)
 	).unwrap();
 
-	let msg_id = run_message.message_id.clone();
-	ton.contracts.send_message(run_message).unwrap();
+	let state = ton.contracts.send_message(run_message.clone()).unwrap();
 
-	let run_transaction = ton.queries.transactions.wait_for(
-        json!({
-            "in_msg": {
-                "eq": msg_id
-            }
-        }).into(),
-		TRANSACTION_FIELDS_ORDINARY).unwrap();
+	// println!("network silent test");
+
+	// let ton1 = TonClient::new_with_base_url("cinet.tonlabs.io").unwrap();
+
+	// let wait_transaction_result = ton1.contracts.wait_transaction(
+	// 	run_message.clone(), 
+	// 	Some(WALLET_ABI.to_string().into()),
+	// 	Some("createOperationLimit"),
+	// 	state,
+	// 	false
+	// ).unwrap_err();
+
+	// println!("Error returned {}", wait_transaction_result);
+
+	// let error = test_errors::extract_inner_error(&wait_transaction_result);
+
+	// let state: crate::MessageProcessingState = serde_json::from_value(error.data["resume_processing_state"].clone()).unwrap();
+
+	let wait_transaction_result = ton.contracts.wait_transaction(
+		run_message, 
+		Some(WALLET_ABI.to_string().into()),
+		Some("createOperationLimit"),
+		state,
+		false
+	).unwrap();
 
 	let run_result = ton.contracts.process_transaction(
 		&address,
-		run_transaction.into(),
+		wait_transaction_result.transaction.clone().into(),
 		Some(WALLET_ABI.to_string().into()),
 		Some("createOperationLimit")
 	).unwrap();
 
 	assert_eq!(run_result.output, json!({"value0": "0x0"}));
+	assert_eq!(wait_transaction_result, run_result);
 
 	// check processing without result decoding
 	let run_message = ton.contracts.create_run_message(
@@ -482,11 +572,10 @@ fn test_messages() {
 			"value": 100_000_000,
 			"period": 1
 		}).to_string().into(),
-		Some(&keypair),
-		Some(2)
+		Some(&keypair)
 	).unwrap();
 
-	let run_result = ton.contracts.process_message(run_message, None, None, Some(2)).unwrap();
+	let run_result = ton.contracts.process_message(run_message, None, None, true).unwrap();
 
 	assert_eq!(run_result.output, json!(null));
 
@@ -501,46 +590,11 @@ fn test_messages() {
 			"value": 100_000_000,
 			"bounce": false
 		}).to_string().into(),
-		Some(&keypair),
-		None
+		Some(&keypair)
 	).unwrap();
 
 	let run_result = ton.contracts.process_message(
-		run_message, Some(WALLET_ABI.to_string().into()), Some("sendTransaction"), None).unwrap();
+		run_message, Some(WALLET_ABI.to_string().into()), Some("sendTransaction"), false).unwrap();
 
 	assert_eq!(run_result.output, json!(null));
 }
-
-pub const TRANSACTION_FIELDS_ORDINARY: &str = r#"
-    id
-    aborted
-    compute {
-        skipped_reason
-        exit_code
-        success
-        gas_fees
-    }
-    storage {
-       status_change
-       storage_fees_collected
-    }
-    action {
-        success
-        valid
-        no_funds
-        result_code
-        total_fwd_fees
-        total_action_fees
-    }
-    in_msg
-    now
-    out_msgs
-    out_messages {
-        id
-        body
-        msg_type
-        value
-    }
-    status
-    total_fees
-"#;

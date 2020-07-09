@@ -15,9 +15,9 @@ use crate::tests::*;
 use crate::error::{TonError, TonErrorKind, InnerSdkError};
 
 pub fn extract_inner_error(error: &TonError) -> InnerSdkError {
+    //println!("{:#}", error);
     match error {
 		TonError(TonErrorKind::InnerSdkError(err), _) => {
-            //println!("{:#?}", err);
 			err.clone()
 		},
 		_ => panic!(),
@@ -42,7 +42,7 @@ fn test_errors() {
         message_retries_count: Some(0),
         message_expiration_timeout: Some(2_000),
         message_expiration_timeout_grow_factor: None,
-        message_processing_timeout: Some(10_000),
+        message_processing_timeout: if *ABI_VERSION == 1 { Some(10_000) } else { None },
         message_processing_timeout_grow_factor: None,
         wait_for_timeout: None,
         access_key: None,
@@ -73,7 +73,7 @@ fn test_errors() {
 
     // deploy with low balance
     let msg = ton_client.contracts.create_deploy_message(
-        HELLO_ABI.to_string().into(), &HELLO_IMAGE, None, json!({}).into(), None, &keypair, 0, None
+        HELLO_ABI.to_string().into(), &HELLO_IMAGE, None, json!({}).into(), None, &keypair, 0
     ).unwrap();
 
     let real_original_code = if *ABI_VERSION == 2 {
@@ -85,7 +85,7 @@ fn test_errors() {
     let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as u32;
 
     // process message with error resolving
-    let result = ton_client.contracts.process_message(msg.message.clone(), None, None, None).unwrap_err();
+    let result = ton_client.contracts.process_message(msg.message.clone(), None, None, false).unwrap_err();
 
     if *NODE_SE {
         check_error(&result, 3025, None); // 3025 - tvm execution failed                 
