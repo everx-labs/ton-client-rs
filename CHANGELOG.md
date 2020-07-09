@@ -1,6 +1,15 @@
 # Release Notes
 All notable changes to this project will be documented in this file.
 
+## 0.25.0 - Jul 09, 2020
+### Featured
+- New transaction wait mechanism. All account's shard blocks are checked for transaction to 
+guarantee message expiration
+
+### New
+- `wait_transaction` function for awaiting previously sent message processing
+- `send_message` returns message processing state for `wait_transaction` function
+
 ## 0.24.0 - Jun 01, 2020
 ### Featured
 - Error resolving after message rejection
