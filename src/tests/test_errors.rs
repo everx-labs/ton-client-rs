@@ -85,7 +85,7 @@ fn test_errors() {
     let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as u32;
 
     // process message with error resolving
-    let result = ton_client.contracts.process_message(msg.message.clone(), None, None, false).unwrap_err();
+    let result = ton_client.contracts.process_message(msg.clone(), None, None, false).unwrap_err();
 
     if *NODE_SE {
         check_error(&result, 3025, None); // 3025 - tvm execution failed                 
@@ -105,7 +105,7 @@ fn test_errors() {
     let result = ton_client.contracts.resolve_error(
         &hello_address,
         Some(account.into()),
-        msg.message,
+        msg,
         time,
         error,
     ).unwrap_err();

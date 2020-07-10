@@ -39,14 +39,6 @@ pub struct ResultOfDeploy {
     pub transaction: serde_json::Value,
 }
 
-/// Result of `create_deploy_message` function. Contains message and future address of the contract
-#[derive(Deserialize, Debug, PartialEq)]
-pub struct ResultOfCreateDeployMessage {
-    pub address: TonAddress,
-    #[serde(flatten)]
-    pub message: EncodedMessage,
-}
-
 #[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParamsOfGetDeployData {
@@ -140,6 +132,7 @@ pub struct EncodedMessage {
     pub message_id: String,
     pub message_body: Vec<u8>,
     pub expire: Option<u32>,
+    pub address: TonAddress,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -422,7 +415,7 @@ impl TonContracts {
         init_params: Option<JsonValue>,
         keys: &Ed25519KeyPair,
         workchain_id: i32
-    ) -> TonResult<ResultOfCreateDeployMessage> {
+    ) -> TonResult<EncodedMessage> {
         Interop::json_request(
             self.context,
             "contracts.deploy.message",

@@ -48,6 +48,7 @@ pub(crate) struct EncodedMessageCore {
     pub message_id: String,
     pub message_body_base64: String,
     pub expire: Option<u32>,
+    pub address: TonAddress,
 }
 
 impl Into<EncodedMessageCore> for EncodedMessage {
@@ -55,7 +56,8 @@ impl Into<EncodedMessageCore> for EncodedMessage {
         EncodedMessageCore {
             message_id: self.message_id,
             message_body_base64: base64::encode(&self.message_body),
-            expire: self.expire
+            expire: self.expire,
+            address: self.address
         }
     }
 }
@@ -67,7 +69,8 @@ impl TryFrom<EncodedMessageCore> for EncodedMessage {
         Ok(EncodedMessage {
             message_id: value.message_id,
             message_body: base64::decode(&value.message_body_base64)?,
-            expire: value.expire
+            expire: value.expire,
+            address: value.address
         })
     }
 }

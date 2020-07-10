@@ -510,7 +510,7 @@ fn test_messages() {
 		0).unwrap();
 
 	ton.contracts.process_message(
-		message.message, None, None, false).unwrap();
+		message, None, None, false).unwrap();
 
 	// check processing with result decoding
 	let run_message = ton.contracts.create_run_message(
