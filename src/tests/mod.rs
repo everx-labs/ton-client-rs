@@ -530,7 +530,7 @@ fn test_messages() {
 
 	// let ton1 = TonClient::new_with_base_url("cinet.tonlabs.io").unwrap();
 
-	// let wait_transaction_result = ton1.contracts.wait_transaction(
+	// let wait_transaction_result = ton1.contracts.wait_for_transaction(
 	// 	run_message.clone(), 
 	// 	Some(WALLET_ABI.to_string().into()),
 	// 	Some("createOperationLimit"),
@@ -544,7 +544,7 @@ fn test_messages() {
 
 	// let state: crate::MessageProcessingState = serde_json::from_value(error.data["resume_processing_state"].clone()).unwrap();
 
-	let wait_transaction_result = ton.contracts.wait_transaction(
+	let wait_transaction_result = ton.contracts.wait_for_transaction(
 		run_message, 
 		Some(WALLET_ABI.to_string().into()),
 		Some("createOperationLimit"),

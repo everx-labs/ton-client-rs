@@ -7,8 +7,8 @@ All notable changes to this project will be documented in this file.
 guarantee message expiration
 
 ### New
-- `wait_transaction` function for awaiting previously sent message processing
-- `send_message` returns message processing state for `wait_transaction` function
+- `wait_for_transaction` function for awaiting previously sent message processing
+- `send_message` returns message processing state for `wait_for_transaction` function
 
 ## 0.24.0 - Jun 01, 2020
 ### Featured

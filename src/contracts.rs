@@ -460,7 +460,7 @@ impl TonContracts {
     }
 
     /// Wait for message processing result and (optionally) parse result
-    pub fn wait_transaction(
+    pub fn wait_for_transaction(
         &self,
         message: EncodedMessage,
         abi: Option<JsonValue>,
