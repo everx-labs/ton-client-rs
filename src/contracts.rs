@@ -27,6 +27,7 @@ pub(crate) struct ParamsOfDeploy {
     pub image_base64: String,
     pub key_pair: Ed25519KeyPair,
     pub workchain_id: i32,
+    pub try_index: Option<u8>,
 }
 
 /// Result of `deploy` function running. Contains address of the contract
@@ -67,7 +68,8 @@ pub(crate) struct ParamsOfRun {
     pub function_name: String,
     pub header: Option<serde_json::Value>,
     pub input: serde_json::Value,
-    pub key_pair: Option<Ed25519KeyPair>
+    pub key_pair: Option<Ed25519KeyPair>,
+    pub try_index: Option<u8>,
 }
 
 #[derive(Serialize, Debug, PartialEq)]
@@ -280,7 +282,8 @@ impl TonContracts {
             constructor_params:constructor_params.to_value()?,
             image_base64: base64::encode(code),
             key_pair: keys.clone(),
-            workchain_id: workchain_id
+            workchain_id: workchain_id,
+            try_index: None,
         })
     }
 
@@ -300,7 +303,8 @@ impl TonContracts {
             function_name: function_name.to_string(),
             header: option_params_to_value(header)?,
             input: input.to_value()?,
-            key_pair: keys.cloned()
+            key_pair: keys.cloned(),
+            try_index: None,
         })
     }
 
@@ -393,7 +397,8 @@ impl TonContracts {
         function_name: &str,
         header: Option<JsonValue>,
         input: JsonValue,
-        keys: Option<&Ed25519KeyPair>
+        keys: Option<&Ed25519KeyPair>,
+        try_index: Option<u8>
     ) -> TonResult<EncodedMessage> {
         Interop::json_request(self.context, "contracts.run.message", ParamsOfRun {
             address: address.clone(),
@@ -401,7 +406,8 @@ impl TonContracts {
             function_name: function_name.to_string(),
             header: option_params_to_value(header)?,
             input: input.to_value()?,
-            key_pair: keys.cloned()
+            key_pair: keys.cloned(),
+            try_index,
         })
     }
 
@@ -414,7 +420,8 @@ impl TonContracts {
         constructor_params: JsonValue,
         init_params: Option<JsonValue>,
         keys: &Ed25519KeyPair,
-        workchain_id: i32
+        workchain_id: i32,
+        try_index: Option<u8>
     ) -> TonResult<EncodedMessage> {
         Interop::json_request(
             self.context,
@@ -426,7 +433,8 @@ impl TonContracts {
                 constructor_params: constructor_params.to_value()?,
                 image_base64: base64::encode(code),
                 key_pair: keys.clone(),
-                workchain_id
+                workchain_id,
+                try_index,
         })
     }
 

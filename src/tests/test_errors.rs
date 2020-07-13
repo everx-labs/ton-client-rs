@@ -73,7 +73,7 @@ fn test_errors() {
 
     // deploy with low balance
     let msg = ton_client.contracts.create_deploy_message(
-        HELLO_ABI.to_string().into(), &HELLO_IMAGE, None, json!({}).into(), None, &keypair, 0
+        HELLO_ABI.to_string().into(), &HELLO_IMAGE, None, json!({}).into(), None, &keypair, 0, None
     ).unwrap();
 
     let real_original_code = if *ABI_VERSION == 2 {

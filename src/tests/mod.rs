@@ -132,7 +132,8 @@ fn test_contracts() {
 			json!({
 				"value": 123
 			}).to_string().into(),
-			Some(&keys)
+			Some(&keys),
+			None
 		).unwrap();
 
 		assert_eq!(message.expire, Some(123));
@@ -507,7 +508,9 @@ fn test_messages() {
         json!({}).into(),
         None,
 		&keypair,
-		0).unwrap();
+		0,
+		None
+	).unwrap();
 
 	ton.contracts.process_message(
 		message, None, None, false).unwrap();
@@ -521,7 +524,8 @@ fn test_messages() {
 		json!({
 			"value": 100_000_000
 		}).to_string().into(),
-		Some(&keypair)
+		Some(&keypair),
+		None
 	).unwrap();
 
 	let state = ton.contracts.send_message(run_message.clone()).unwrap();
@@ -572,7 +576,8 @@ fn test_messages() {
 			"value": 100_000_000,
 			"period": 1
 		}).to_string().into(),
-		Some(&keypair)
+		Some(&keypair),
+		None
 	).unwrap();
 
 	let run_result = ton.contracts.process_message(run_message, None, None, true).unwrap();
@@ -590,7 +595,8 @@ fn test_messages() {
 			"value": 100_000_000,
 			"bounce": false
 		}).to_string().into(),
-		Some(&keypair)
+		Some(&keypair),
+		None
 	).unwrap();
 
 	let run_result = ton.contracts.process_message(
