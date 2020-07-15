@@ -17,6 +17,7 @@ pub struct InnerSdkError {
     pub source: String,
     pub code: isize,
     pub message: String,
+    pub message_processing_state: Option<crate::contracts::MessageProcessingState>,
     pub data: serde_json::Value,
 }
 

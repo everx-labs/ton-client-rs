@@ -488,7 +488,7 @@ fn test_retries() {
 
 #[test]
 fn test_messages() {
-    let ton = create_client();
+	let ton = create_client();
 
     let keypair = ton.crypto.generate_ed25519_keys().unwrap();
 
@@ -546,7 +546,7 @@ fn test_messages() {
 
 	// let error = test_errors::extract_inner_error(&wait_transaction_result);
 
-	// let state: crate::MessageProcessingState = serde_json::from_value(error.data["resume_processing_state"].clone()).unwrap();
+	// let state = error.message_processing_state.unwrap();
 
 	let wait_transaction_result = ton.contracts.wait_for_transaction(
 		run_message, 
