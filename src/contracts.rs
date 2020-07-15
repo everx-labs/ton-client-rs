@@ -211,11 +211,11 @@ pub struct MessageProcessingState {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ParamsOfWaitTransaction {
+pub(crate) struct ParamsOfWaitForTransaction {
     pub abi: Option<serde_json::Value>,
     pub function_name: Option<String>,
     pub message: EncodedMessage,
-    pub state: MessageProcessingState,
+    pub message_processing_state: MessageProcessingState,
     pub infinite_wait: bool
 }
 
@@ -473,16 +473,16 @@ impl TonContracts {
         message: EncodedMessage,
         abi: Option<JsonValue>,
         function_name: Option<&str>,
-        state: MessageProcessingState,
+        message_processing_state: MessageProcessingState,
         infinite_wait: bool
     ) -> TonResult<ResultOfRun> {
         Interop::json_request(
             self.context,
             "contracts.wait.transaction",
-            ParamsOfWaitTransaction {
+            ParamsOfWaitForTransaction {
                 abi: option_params_to_value(abi)?,
                 function_name: function_name.map(|val| val.to_owned()),
-                state,
+                message_processing_state,
                 message,
                 infinite_wait
             }
