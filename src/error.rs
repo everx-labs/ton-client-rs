@@ -14,6 +14,7 @@
  /// Error returned from SDK core
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InnerSdkError {
+    pub core_version: String,
     pub source: String,
     pub code: isize,
     pub message: String,
