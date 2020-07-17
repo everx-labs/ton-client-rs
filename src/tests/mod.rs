@@ -61,7 +61,32 @@ fn get_wallet_keys() -> Option<Ed25519KeyPair> {
     Some(serde_json::from_str(&keys).unwrap())
 }
 
+struct SimpleLogger;
+
+impl log::Log for SimpleLogger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &log::Record) {
+		match record.level() {
+			log::Level::Error | log::Level::Warn => {
+				eprintln!("{} - {}", record.level(), record.args());
+			}
+			_ => {
+				println!("{} - {}", record.level(), record.args());
+			}
+		}
+        
+    }
+
+    fn flush(&self) {}
+}
+
 pub fn create_client() -> TonClient {
+	log::set_boxed_logger(Box::new(SimpleLogger)).unwrap();
+	log::set_max_level(log::LevelFilter::Warn);
+
 	println!("Network address {}", *NODE_ADDRESS);
 	if *NODE_SE {
 		println!("Node SE giver");

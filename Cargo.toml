@@ -26,3 +26,4 @@ ton_client = { git = "https://github.com/tonlabs/TON-SDK.git", tag = "0" }
 [dev-dependencies]
 lazy_static = "1.4.0"
 dirs = "2.0.2"
+log = "0.4.11"

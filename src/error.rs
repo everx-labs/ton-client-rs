@@ -79,10 +79,12 @@ error_chain! {
         InnerSdkError(inner: InnerSdkError) {
             description("Inner SDK error"),
             display(
-                "Inner SDK error.\n source: {}\n code: {}\n message: {}\n data: {:#}\n",
+                "Inner SDK error.\n core version: {}\n source: {}\n code: {}\n message: {}\n message processing state: {:#?} data: {:#}\n",
+                inner.core_version,
                 inner.source,
                 inner.code,
                 inner.message,
+                inner.message_processing_state,
                 inner.data,
             )
         }

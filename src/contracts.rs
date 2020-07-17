@@ -206,7 +206,7 @@ pub(crate) struct ParamsOfProcessTransaction{
 #[serde(rename_all = "camelCase")]
 pub struct MessageProcessingState {
     last_block_id: String,
-    sent_time: u32,
+    sending_time: u32,
 }
 
 #[derive(Serialize)]
@@ -533,14 +533,14 @@ impl TonContracts {
         address: &TonAddress,
         account: Option<JsonValue>,
         message: EncodedMessage,
-        send_time: u32,
+        time: u32,
         error: InnerSdkError
     ) -> TonResult<()> {
         Interop::json_request(self.context, "contracts.resolve.error", ParamsOfResolveError {
             address: address.clone(),
             account: option_params_to_value(account)?,
             message_base64: base64::encode(&message.message_body),
-            time: send_time,
+            time: time,
             main_error: error,
         })
     }
