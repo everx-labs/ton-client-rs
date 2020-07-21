@@ -84,8 +84,8 @@ impl log::Log for SimpleLogger {
 }
 
 pub fn create_client() -> TonClient {
-	log::set_boxed_logger(Box::new(SimpleLogger)).unwrap();
-	log::set_max_level(log::LevelFilter::Warn);
+	//log::set_boxed_logger(Box::new(SimpleLogger)).unwrap();
+	//log::set_max_level(log::LevelFilter::Warn);
 
 	println!("Network address {}", *NODE_ADDRESS);
 	if *NODE_SE {
@@ -462,6 +462,9 @@ fn test_deploy_data() {
 
 #[test]
 fn test_retries() {
+	if *ABI_VERSION == 1 {
+		return;
+	}
 	let config = crate::client::TonClientConfig {
         base_url: Some(NODE_ADDRESS.to_string()),
         message_retries_count: Some(10),

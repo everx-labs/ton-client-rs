@@ -115,7 +115,7 @@ fn test_errors() {
     // ABI version 1 messages don't expire so previous deploy message can be processed after
     // increasing balance. Need to wait until message will be rejected by all validators
     if *ABI_VERSION == 1 && !*NODE_SE{
-        std::thread::sleep(std::time::Duration::from_secs(50));
+        std::thread::sleep(std::time::Duration::from_secs(40));
     }
 
     // run before deploy
