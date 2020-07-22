@@ -82,8 +82,10 @@ fn test_local_run() {
     let time = now() + 3;
 
     // emulate local transaction to recieve new account state
+    let mut context = crate::LocalRunContext::default();
+    context.time = Some(time);
     let result = ton_client.contracts.run_local(
-        &address, None, abi.clone(), "touch", None, json!({}).into(), Some(&keypair), Some(time), true
+        &address, None, abi.clone(), "touch", None, json!({}).into(), Some(&keypair), Some(context), true
     ).unwrap();
 
     let local_response = ton_client.contracts.run_local(
