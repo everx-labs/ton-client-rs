@@ -43,9 +43,9 @@ fn test_errors() {
         message_expiration_timeout: Some(2_000),
         message_expiration_timeout_grow_factor: None,
         message_processing_timeout: if *ABI_VERSION == 1 { Some(10_000) } else { None },
-        message_processing_timeout_grow_factor: None,
         wait_for_timeout: None,
         access_key: None,
+        out_of_sync_threshold: None,
     };
     let ton_client = TonClient::new(&config).unwrap();
     let std_ton_client = create_client();

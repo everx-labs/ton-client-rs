@@ -32,13 +32,12 @@ use serde::de::DeserializeOwned;
 /// `message_processing_timeout` sets timeout in ms for processing messages to contracts which don't support
 /// message expiration. It is also used for waiting blocks after message expiration time ends.assert_eq!
 /// 
-/// `message_processing_timeout_grow_factor` sets `message_processing_timeout` multiplying coefficient
-/// for retriyng messages. `message_processing_timeout` for each retry is calculated by formula
-/// `message_processing_timeout * message_processing_timeout_grow_factor^retry_index`. Default is 1.5
-/// 
 /// `wait_for_timeout` sets default timeout in ms for `wait_for` function
 /// 
 /// `access_key` is key for authenicating user to Tonlabs node
+/// 
+/// `out_of_sync_threshold` is maximum allowed time difference between client and node in ms. 
+/// Default is 15000 ms
 /// 
 #[derive(Default, Serialize, Clone, Debug)]
 #[serde(rename_all="camelCase")]
@@ -48,9 +47,9 @@ pub struct TonClientConfig {
     pub message_expiration_timeout: Option<u32>,
     pub message_expiration_timeout_grow_factor: Option<f32>,
     pub message_processing_timeout: Option<u32>,
-    pub message_processing_timeout_grow_factor: Option<f32>,
     pub wait_for_timeout: Option<u32>,
     pub access_key: Option<String>,
+    pub out_of_sync_threshold: Option<i64>
 }
 
 /// Entry point for TON blockchain interaction. Provides useful methods for TON clients
