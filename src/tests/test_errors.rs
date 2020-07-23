@@ -15,9 +15,9 @@ use crate::tests::*;
 use crate::error::{TonError, TonErrorKind, InnerSdkError};
 
 pub fn extract_inner_error(error: &TonError) -> InnerSdkError {
+    //println!("{:#}", error);
     match error {
 		TonError(TonErrorKind::InnerSdkError(err), _) => {
-            //println!("{:#?}", err);
 			err.clone()
 		},
 		_ => panic!(),
@@ -42,10 +42,10 @@ fn test_errors() {
         message_retries_count: Some(0),
         message_expiration_timeout: Some(2_000),
         message_expiration_timeout_grow_factor: None,
-        message_processing_timeout: Some(10_000),
-        message_processing_timeout_grow_factor: None,
+        message_processing_timeout: if *ABI_VERSION == 1 { Some(10_000) } else { None },
         wait_for_timeout: None,
         access_key: None,
+        out_of_sync_threshold: None,
     };
     let ton_client = TonClient::new(&config).unwrap();
     let std_ton_client = create_client();
@@ -85,7 +85,7 @@ fn test_errors() {
     let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as u32;
 
     // process message with error resolving
-    let result = ton_client.contracts.process_message(msg.message.clone(), None, None, None).unwrap_err();
+    let result = ton_client.contracts.process_message(msg.clone(), None, None, false).unwrap_err();
 
     if *NODE_SE {
         check_error(&result, 3025, None); // 3025 - tvm execution failed                 
@@ -105,7 +105,7 @@ fn test_errors() {
     let result = ton_client.contracts.resolve_error(
         &hello_address,
         Some(account.into()),
-        msg.message,
+        msg,
         time,
         error,
     ).unwrap_err();
@@ -115,7 +115,7 @@ fn test_errors() {
     // ABI version 1 messages don't expire so previous deploy message can be processed after
     // increasing balance. Need to wait until message will be rejected by all validators
     if *ABI_VERSION == 1 && !*NODE_SE{
-        std::thread::sleep(std::time::Duration::from_secs(50));
+        std::thread::sleep(std::time::Duration::from_secs(40));
     }
 
     // run before deploy

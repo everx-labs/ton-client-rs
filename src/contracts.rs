@@ -36,15 +36,8 @@ pub(crate) struct ParamsOfDeploy {
 pub struct ResultOfDeploy {
     pub address: TonAddress,
     pub already_deployed: bool,
-    pub fees: Option<TransactionFees>
-}
-
-/// Result of `create_deploy_message` function. Contains message and future address of the contract
-#[derive(Deserialize, Debug, PartialEq)]
-pub struct ResultOfCreateDeployMessage {
-    pub address: TonAddress,
-    #[serde(flatten)]
-    pub message: EncodedMessage,
+    pub fees: Option<TransactionFees>,
+    pub transaction: serde_json::Value,
 }
 
 #[derive(Serialize, Debug, PartialEq)]
@@ -109,7 +102,8 @@ pub(crate) struct ParamsOfLocalRunWithMsg {
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct ResultOfRun {
     pub output: Value,
-    pub fees: TransactionFees
+    pub fees: TransactionFees,
+    pub transaction: serde_json::Value,
 }
 
 /// Result of `run` function running. Contains parameters returned by contract function
@@ -140,6 +134,7 @@ pub struct EncodedMessage {
     pub message_id: String,
     pub message_body: Vec<u8>,
     pub expire: Option<u32>,
+    pub address: TonAddress,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -164,7 +159,7 @@ pub(crate) struct ParamsOfProcessMessage{
     pub abi: Option<serde_json::Value>,
     pub function_name: Option<String>,
     pub message: EncodedMessage,
-    pub try_index: Option<u8>,
+    pub infinite_wait: bool
 }
 
 #[derive(Deserialize, Serialize, Debug, Default, PartialEq)]
@@ -198,13 +193,30 @@ pub(crate) struct ParamsOfResolveError {
     pub main_error: InnerSdkError,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParamsOfProcessTransaction{
     pub transaction: serde_json::Value,
     pub abi: Option<serde_json::Value>,
     pub function_name: Option<String>,
     pub address: TonAddress,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageProcessingState {
+    last_block_id: String,
+    sending_time: u32,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ParamsOfWaitForTransaction {
+    pub abi: Option<serde_json::Value>,
+    pub function_name: Option<String>,
+    pub message: EncodedMessage,
+    pub message_processing_state: MessageProcessingState,
+    pub infinite_wait: bool
 }
 
 /// Contract management struct
@@ -271,7 +283,7 @@ impl TonContracts {
             image_base64: base64::encode(code),
             key_pair: keys.clone(),
             workchain_id: workchain_id,
-            try_index: None
+            try_index: None,
         })
     }
 
@@ -292,7 +304,7 @@ impl TonContracts {
             header: option_params_to_value(header)?,
             input: input.to_value()?,
             key_pair: keys.cloned(),
-            try_index: None
+            try_index: None,
         })
     }
 
@@ -395,7 +407,7 @@ impl TonContracts {
             header: option_params_to_value(header)?,
             input: input.to_value()?,
             key_pair: keys.cloned(),
-            try_index
+            try_index,
         })
     }
 
@@ -410,7 +422,7 @@ impl TonContracts {
         keys: &Ed25519KeyPair,
         workchain_id: i32,
         try_index: Option<u8>
-    ) -> TonResult<ResultOfCreateDeployMessage> {
+    ) -> TonResult<EncodedMessage> {
         Interop::json_request(
             self.context,
             "contracts.deploy.message",
@@ -421,13 +433,13 @@ impl TonContracts {
                 constructor_params: constructor_params.to_value()?,
                 image_base64: base64::encode(code),
                 key_pair: keys.clone(),
-                workchain_id: workchain_id,
-                try_index
+                workchain_id,
+                try_index,
         })
     }
 
     /// Send message to node without waiting for processing result
-    pub fn send_message(&self, message: EncodedMessage) -> TonResult<()> {
+    pub fn send_message(&self, message: EncodedMessage) -> TonResult<MessageProcessingState> {
         Interop::json_request(
             self.context,
             "contracts.send.message",
@@ -441,7 +453,7 @@ impl TonContracts {
         message: EncodedMessage,
         abi: Option<JsonValue>,
         function_name: Option<&str>,
-        try_index: Option<u8>
+        infinite_wait: bool
     ) -> TonResult<ResultOfRun> {
         Interop::json_request(
             self.context,
@@ -449,8 +461,30 @@ impl TonContracts {
             ParamsOfProcessMessage {
                 abi: option_params_to_value(abi)?,
                 function_name: function_name.map(|val| val.to_owned()),
-                try_index,
-                message: message.into()
+                infinite_wait,
+                message: message
+            }
+        )
+    }
+
+    /// Wait for message processing result and (optionally) parse result
+    pub fn wait_for_transaction(
+        &self,
+        message: EncodedMessage,
+        abi: Option<JsonValue>,
+        function_name: Option<&str>,
+        message_processing_state: MessageProcessingState,
+        infinite_wait: bool
+    ) -> TonResult<ResultOfRun> {
+        Interop::json_request(
+            self.context,
+            "contracts.wait.transaction",
+            ParamsOfWaitForTransaction {
+                abi: option_params_to_value(abi)?,
+                function_name: function_name.map(|val| val.to_owned()),
+                message_processing_state,
+                message,
+                infinite_wait
             }
         )
     }
@@ -499,14 +533,14 @@ impl TonContracts {
         address: &TonAddress,
         account: Option<JsonValue>,
         message: EncodedMessage,
-        send_time: u32,
+        time: u32,
         error: InnerSdkError
     ) -> TonResult<()> {
         Interop::json_request(self.context, "contracts.resolve.error", ParamsOfResolveError {
             address: address.clone(),
             account: option_params_to_value(account)?,
             message_base64: base64::encode(&message.message_body),
-            time: send_time,
+            time: time,
             main_error: error,
         })
     }

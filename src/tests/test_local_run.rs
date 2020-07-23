@@ -22,9 +22,9 @@ fn test_local_run() {
         message_expiration_timeout: None,
         message_expiration_timeout_grow_factor: None,
         message_processing_timeout: None,
-        message_processing_timeout_grow_factor: None,
         wait_for_timeout: Some(5_000),
         access_key: None,
+        out_of_sync_threshold: None,
     };
     let ton_client = TonClient::new(&config).unwrap();
     let std_ton_client = create_client();
@@ -45,7 +45,7 @@ fn test_local_run() {
 
     // check full run of deploy - contract should become active
     let result = ton_client.contracts.run_local_msg(
-        &address, None, msg.message.clone(), None, None, None, true).unwrap();
+        &address, None, msg.clone(), None, None, None, true).unwrap();
         
     assert!(result.fees.is_some());
     assert_eq!(result.account.unwrap()["acc_type"], 1); // account active
@@ -53,7 +53,7 @@ fn test_local_run() {
     println!("{:#?}", result.fees.unwrap());
 
     let result_err = ton_client.contracts.run_local_msg(
-        &address, None, msg.message.clone(), None, None, None, false).unwrap_err();
+        &address, None, msg.clone(), None, None, None, false).unwrap_err();
 
     check_error(&result_err, 1015, None); // code missing
 

@@ -14,9 +14,11 @@
  /// Error returned from SDK core
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InnerSdkError {
+    pub core_version: String,
     pub source: String,
     pub code: isize,
     pub message: String,
+    pub message_processing_state: Option<crate::contracts::MessageProcessingState>,
     pub data: serde_json::Value,
 }
 
@@ -77,10 +79,12 @@ error_chain! {
         InnerSdkError(inner: InnerSdkError) {
             description("Inner SDK error"),
             display(
-                "Inner SDK error.\n source: {}\n code: {}\n message: {}\n data: {:#}\n",
+                "Inner SDK error.\n core version: {}\n source: {}\n code: {}\n message: {}\n message processing state: {:#?} data: {:#}\n",
+                inner.core_version,
                 inner.source,
                 inner.code,
                 inner.message,
+                inner.message_processing_state,
                 inner.data,
             )
         }
