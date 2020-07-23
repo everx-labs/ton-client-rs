@@ -471,9 +471,9 @@ fn test_retries() {
         message_expiration_timeout: None,
         message_expiration_timeout_grow_factor: Some(1.1),
         message_processing_timeout: None,
-        message_processing_timeout_grow_factor: Some(0.9),
         wait_for_timeout: None,
-        access_key: None,
+		access_key: None,
+		out_of_sync_threshold: None,
     };
 	let ton_client = TonClient::new(&config).unwrap();
 	

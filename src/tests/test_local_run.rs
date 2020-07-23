@@ -22,9 +22,9 @@ fn test_local_run() {
         message_expiration_timeout: None,
         message_expiration_timeout_grow_factor: None,
         message_processing_timeout: None,
-        message_processing_timeout_grow_factor: None,
         wait_for_timeout: Some(5_000),
         access_key: None,
+        out_of_sync_threshold: None,
     };
     let ton_client = TonClient::new(&config).unwrap();
     let std_ton_client = create_client();
