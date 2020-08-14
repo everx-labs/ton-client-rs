@@ -72,7 +72,16 @@ pub(crate) struct ParamsOfRun {
     pub try_index: Option<u8>,
 }
 
-#[derive(Serialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalRunContext {
+    pub config_boc: Option<String>,
+    pub time: Option<u32>,
+    pub transaction_lt: Option<u64>,
+    pub block_lt: Option<u64>
+}
+
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParamsOfLocalRun {
     pub address: TonAddress,
@@ -83,10 +92,11 @@ pub(crate) struct ParamsOfLocalRun {
     pub input: serde_json::Value,
     pub key_pair: Option<Ed25519KeyPair>,
     pub full_run: bool,
-    pub time: Option<u32>,
+    #[serde(flatten)]
+    pub context: Option<LocalRunContext>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ParamsOfLocalRunWithMsg {
     pub address: TonAddress,
@@ -95,7 +105,8 @@ pub(crate) struct ParamsOfLocalRunWithMsg {
     pub function_name: Option<String>,
     pub message_base64: String,
     pub full_run: bool,
-    pub time: Option<u32>,
+    #[serde(flatten)]
+    pub context: Option<LocalRunContext>,
 }
 
 /// Result of `run` function running. Contains parameters returned by contract function
@@ -318,7 +329,7 @@ impl TonContracts {
         header: Option<JsonValue>,
         input: JsonValue,
         keys: Option<&Ed25519KeyPair>,
-        time: Option<u32>,
+        context: Option<LocalRunContext>,
         emulate_transaction: bool
     ) -> TonResult<ResultOfLocalRun> {
         Interop::json_request(self.context, "contracts.run.local", ParamsOfLocalRun {
@@ -329,7 +340,7 @@ impl TonContracts {
             header: option_params_to_value(header)?,
             input: input.to_value()?,
             key_pair: keys.cloned(),
-            time,
+            context,
             full_run: emulate_transaction
         })
     }
@@ -342,7 +353,7 @@ impl TonContracts {
         message: EncodedMessage,
         abi: Option<JsonValue>,
         function_name: Option<&str>,
-        time: Option<u32>,
+        context: Option<LocalRunContext>,
         emulate_transaction: bool,
     ) -> TonResult<ResultOfLocalRun> {
         Interop::json_request(self.context, "contracts.run.local.msg", ParamsOfLocalRunWithMsg {
@@ -351,7 +362,7 @@ impl TonContracts {
             message_base64: base64::encode(&message.message_body),
             abi: option_params_to_value(abi)?,
             function_name: function_name.map(|val| val.to_string()),
-            time,
+            context,
             full_run: emulate_transaction
         })
     }

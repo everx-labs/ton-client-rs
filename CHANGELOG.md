@@ -1,6 +1,11 @@
 # Release Notes
 All notable changes to this project will be documented in this file.
 
+## 0.26.0 - Aug 12, 2020
+### New
+- `run_local` function use `LocalRunContext` to exactly reproduce all transaction parameters and
+produce the same result as node
+
 ## 0.25.0 - Jul 09, 2020
 ### Featured
 - New transaction waiting mechanism. All account's shard blocks are checked for transaction to 
