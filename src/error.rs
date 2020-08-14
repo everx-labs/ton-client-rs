@@ -79,12 +79,12 @@ error_chain! {
         InnerSdkError(inner: InnerSdkError) {
             description("Inner SDK error"),
             display(
-                "Inner SDK error.\n core version: {}\n source: {}\n code: {}\n message: {}\n message processing state: {:#?} data: {:#}\n",
+                "Inner SDK error.\ncore version: {}\nsource: {}\ncode: {}\nmessage: {}\nmessage_processing_state: {:#}\ndata: {:#}\n",
                 inner.core_version,
                 inner.source,
                 inner.code,
                 inner.message,
-                inner.message_processing_state,
+                serde_json::json!(inner.message_processing_state),
                 inner.data,
             )
         }
