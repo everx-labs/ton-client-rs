@@ -1,14 +1,5 @@
 /*
  * Copyright 2018-2020 TON DEV SOLUTIONS LTD.
- *
- * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
- * this file except in compliance with the License.
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific TON DEV software governing permissions and
- * limitations under the License.
  */
 
  /// Error returned from SDK core
@@ -79,12 +70,12 @@ error_chain! {
         InnerSdkError(inner: InnerSdkError) {
             description("Inner SDK error"),
             display(
-                "Inner SDK error.\n core version: {}\n source: {}\n code: {}\n message: {}\n message processing state: {:#?} data: {:#}\n",
+                "Inner SDK error.\ncore version: {}\nsource: {}\ncode: {}\nmessage: {}\nmessage_processing_state: {:#}\ndata: {:#}\n",
                 inner.core_version,
                 inner.source,
                 inner.code,
                 inner.message,
-                inner.message_processing_state,
+                serde_json::json!(inner.message_processing_state),
                 inner.data,
             )
         }
