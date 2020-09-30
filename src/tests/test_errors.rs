@@ -118,7 +118,7 @@ fn test_errors() {
     if *NODE_SE {
         check_error(&result, 1015, None) // 1015 - code missing              
     } else {
-        check_error(&result, 1015, Some(real_original_code)) // 1015 - code missing
+        check_error(&result, 3018, Some(real_original_code)) // old:1015 - AccountCodeMissing, new:3018 - ContractsLocalRunFailed 
     };
 
     // normal deploy
