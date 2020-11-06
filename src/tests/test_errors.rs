@@ -98,10 +98,12 @@ fn test_errors() {
         Some(account.into()),
         msg,
         time,
-        error,
+        error.clone(),
     ).unwrap_err();
 
     check_error(&result, 1016, Some(code));    // 1016 - low balance
+    let resolved = extract_inner_error(&result);
+    assert_eq!(resolved.data["original_error"], json!(error));
 
     // ABI version 1 messages don't expire so previous deploy message can be processed after
     // increasing balance. Need to wait until message will be rejected by all validators
@@ -118,7 +120,7 @@ fn test_errors() {
     if *NODE_SE {
         check_error(&result, 1015, None) // 1015 - code missing              
     } else {
-        check_error(&result, 3018, Some(real_original_code)) // old:1015 - AccountCodeMissing, new:3018 - ContractsLocalRunFailed 
+        check_error(&result, 1015, Some(real_original_code)) // 1015 - AccountCodeMissing
     };
 
     // normal deploy
