@@ -1,6 +1,10 @@
 # Release Notes
 All notable changes to this project will be documented in this file.
 
+## 0.28.0 Nov 6, 2020
+### Fixed
+- local error resolving processes `NoGas` and `NoState` errors properly
+
 ## 0.26.0 - Aug 12, 2020
 ### New
 - `run_local` function use `LocalRunContext` to exactly reproduce all transaction parameters and
