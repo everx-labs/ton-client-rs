@@ -79,7 +79,7 @@ fn test_errors() {
     let result = ton_client.contracts.process_message(msg.clone(), None, None, false).unwrap_err();
 
     if *NODE_SE {
-        check_error(&result, 3025, None); // 3025 - tvm execution failed                 
+        check_error(&result, 1016, None); // 1016 - low balance
     } else {
         check_error(&result, 1016, Some(real_original_code))    // 1016 - low balance
     };
