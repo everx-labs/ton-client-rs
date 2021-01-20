@@ -89,7 +89,7 @@ fn test_local_run() {
         None, None, false,
     ).expect("Couldn't runLocal sayHello");
 
-    assert_eq!(local_response.output["value0"], format!("0x{:x}", time));
+    assert_eq!(local_response.output["value0"], format!("{}", time));
     assert!(local_response.fees.is_none());
     assert!(local_response.account.is_none());
 }
