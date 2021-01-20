@@ -316,11 +316,11 @@ fn test_decode_input() {
 
 	assert_eq!(result.function, "subscribe");
 	assert_eq!(result.output, json!({
-        "period": "0x15180",
+        "period": "86400",
         "pubkey": "0xe31e8aac98f0032b92e37618aba8a3117a983cd957bae120de29e6fd7ceb8e9d",
         "subscriptionId": "0x2222222222222222222222222222222222222222222222222222222222222222",
         "to": "0:f9c4f95cad2ec18460caf07c280f001d5d049b933d399af7ad4c40f77d4b3030",
-        "value": "0x12a05f200"
+        "value": "5000000000"
     }));
 }
 
@@ -582,7 +582,7 @@ fn test_messages() {
 		Some("createOperationLimit")
 	).unwrap();
 
-	assert_eq!(run_result.output, json!({"value0": "0x0"}));
+	assert_eq!(run_result.output, json!({"value0": "0x0000000000000000000000000000000000000000000000000000000000000000"}));
 	assert_eq!(wait_transaction_result, run_result);
 
 	// check processing without result decoding
