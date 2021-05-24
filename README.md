@@ -1,4 +1,4 @@
-# ton-client-rs
+# DEPRECATED ton-client-rs
 
 > ⚠️ ton-client-rs is deprecated. Please use [TON SDK](https://github.com/tonlabs/TON-SDK/blob/master/README.md) package instead.
 
